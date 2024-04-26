@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"lint": "eslint --fix --quiet ./packages"
+		"lint": "eslint --fix --quiet --no-error-on-unmatched-pattern packages/"
 	},
 	"keywords": [],
 	"author": "",
@@ -20,6 +20,7 @@
 		"husky": "^9.0.11",
 		"lint-staged": "^15.2.2",
 		"prettier": "^3.2.5",
+		"rollup": "^4.16.4",
 		"typescript-eslint": "^7.7.1"
 	},
 	"husky": {
