@@ -2,9 +2,9 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"target": "es2015",
-		"lib": ["es2015"]
-		// "paths": {
-		// 	"shared/*": ["packages/shared/*"]
-		// }
+		"lib": ["es2015", "dom"],
+		"paths": {
+			"hostConfig": ["packages/reconciler/src/hostConfig.ts"]
+		}
 	}
 }
