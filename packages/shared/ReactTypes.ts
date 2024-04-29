@@ -1,0 +1,16 @@
+export type Type = ElementType;
+export type Key = string;
+export type Ref = string;
+export interface Props {
+	children?: Array<string> | undefined;
+}
+export type ElementType = string;
+
+export interface ReactElementType {
+	$$typeof: symbol | number;
+	type: Type;
+	key: Key;
+	ref: Ref;
+	props: Props;
+	__mark: string;
+}

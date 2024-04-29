@@ -1,0 +1,10 @@
+{
+	"compilerOptions": {
+		"baseUrl": ".",
+		"target": "es2015",
+		"lib": ["es2015"]
+		// "paths": {
+		// 	"shared/*": ["packages/shared/*"]
+		// }
+	}
+}
