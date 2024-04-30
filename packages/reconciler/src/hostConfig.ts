@@ -15,6 +15,10 @@ export function createTextInstance(content: string | number): any {
 	return {} as any;
 }
 
+export function appendInitialChild(parent: Instance, child: Instance) {
+	parent.appendChild(child);
+}
+
 export function appendChildToContainer(...args: any) {
 	console.log(args);
 

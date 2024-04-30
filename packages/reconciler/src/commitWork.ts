@@ -1,6 +1,6 @@
 import { ContainerType, appendChildToContainer } from 'hostConfig';
 import { MutationMask, NoFlags, Placement } from './fiberFlags';
-import { FiberNode } from './fiberNode';
+import { FiberNode, FiberRootNode } from './fiberNode';
 import { HostComponent, HostRoot, HostText } from './workTag';
 
 let nextEffect: FiberNode | null = null;
@@ -11,7 +11,7 @@ export const commitMutationEffects = (finishedWork: FiberNode) => {
 	nextEffect = finishedWork;
 	while (nextEffect !== null) {
 		const child: FiberNode | null = nextEffect.child;
-		if ((child.subtreeFlags & MutationMask) !== NoFlags && child !== null) {
+		if (child !== null && (child?.subtreeFlags & MutationMask) !== NoFlags) {
 			nextEffect = child;
 		} else {
 			// 要么找到叶子节点，要么找到非副作用的子树，可以回退了
@@ -44,7 +44,10 @@ function commitPlacement(finishedWork: FiberNode) {
 		console.log('commitPlacement', finishedWork);
 	}
 	const hostParent = getHostParent(finishedWork);
-	appendPlacementNodeIntoContainer(finishedWork, hostParent);
+	// hostParent为null的情况，说明finishedWork是rootFiber了，不需要再插入
+	if (hostParent !== null) {
+		appendPlacementNodeIntoContainer(finishedWork, hostParent);
+	}
 }
 
 // 向上查找类型为HostComponent或者hostRoot的节点，只有这两种节点才能作为容器插入元素
@@ -56,7 +59,7 @@ function getHostParent(finishedWork: FiberNode) {
 			return parent.stateNode as ContainerType;
 		}
 		if (parentTag === HostRoot) {
-			return (parent.stateNode as ContainerType).container;
+			return (parent.stateNode as FiberRootNode).container;
 		}
 		parent = parent.return;
 	}

@@ -1,4 +1,9 @@
-import { Instance, createInstance, createTextInstance } from 'hostConfig';
+import {
+	Instance,
+	appendInitialChild,
+	createInstance,
+	createTextInstance
+} from 'hostConfig';
 import { FiberNode } from './fiberNode';
 import { HostComponent, HostRoot, HostText } from './workTag';
 import { NoFlags } from './fiberFlags';
@@ -73,10 +78,6 @@ function appendAllChildren(parent: Instance, wip: FiberNode) {
 		node = node.sibling;
 	}
 	return null;
-}
-
-function appendInitialChild(parent: Instance, child: Instance) {
-	parent.appendChild(child);
 }
 
 /**
