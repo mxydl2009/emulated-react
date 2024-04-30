@@ -2,7 +2,8 @@ export type Type = ElementType;
 export type Key = string;
 export type Ref = string;
 export interface Props {
-	children?: Array<string> | undefined;
+	children?: Array<ReactElementType> | undefined | ReactElementType;
+	content?: string | number;
 }
 export type ElementType = string;
 

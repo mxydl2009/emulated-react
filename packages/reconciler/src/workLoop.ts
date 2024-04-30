@@ -54,10 +54,18 @@ function renderRoot(root: FiberRootNode) {
 			workLoop();
 			break;
 		} catch (e) {
-			console.warn('workLoop发生错误', e);
+			if (__DEV__) {
+				console.warn('workLoop发生错误', e);
+			}
 			workInProgress = null;
 		}
 	} while (true);
+
+	const finishedWork = root.current.alternate;
+	root.finishedWork = finishedWork;
+
+	// 根据新的workInProgress树和副作用，执行DOM操作
+	// commitRoot(root);
 }
 
 function workLoop() {
@@ -77,6 +85,12 @@ function performUnitOfWork(fiber: FiberNode | null) {
 	}
 }
 
+/**
+ * 完成子节点实例挂载到父节点实例上
+ * 更新workInProgress
+ * @param fiber
+ * @returns
+ */
 function completeUnitOfWork(fiber: FiberNode) {
 	let node: FiberNode | null = fiber;
 	do {

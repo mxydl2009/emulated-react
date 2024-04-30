@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import ts from 'rollup-plugin-typescript2';
 import cjs from '@rollup/plugin-commonjs';
+import replace from '@rollup/plugin-replace';
 
 const sourcePkgPath = path.resolve(__dirname, '../../packages');
 
@@ -29,6 +30,19 @@ export function getPkgJson(pkgName) {
 
 // 没有commonjs的插件，会报错：在shared/ReactTypes.ts中没有导出ReactElementType，但实际上是导出的，很奇怪
 // 源码中暂时没有任何的commonjs模块啊
-export function getCommonPlugins(tsconfig = {}) {
-	return [cjs(), ts(tsconfig)];
+export function getCommonPlugins(
+	tsconfig = {},
+	alias = {
+		__DEV__: process.env.NODE_ENV === 'development' ? true : false
+	}
+) {
+	return [
+		cjs(),
+		ts(tsconfig),
+		replace({}),
+		// 将__DEV__构建中替换为true
+		replace({
+			__DEV__: alias.__DEV__
+		})
+	];
 }

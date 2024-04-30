@@ -11,6 +11,16 @@ fiber树的结构是由return属性、child属性和sibling属性组成，所以
 
 fiber树根节点hostRootFiber是由root节点(即hostRoot)产生，`hostRootFiber.stateNode`指向fiberRootNode节点，而fiberRootNode节点用于双缓存技术切换当前UI对应的fiber树，因此，`fiberRootNode.current`指向当前的hostRootFiber节点
 
+## workInProgress
+
+reconciler的全局变量，用来指向当前待构建的fiber节点，while循环通过不断消费更新workInProgress来推进，直到workInProgress为null停止循环。while循环内部调用performUnitOfWork方法
+
+### performUnitOfWork和CompleteUnitOfWork
+
+通过beginWork消费workInProgress，并生成wip的子节点，直到workInProgress为null，到达左子树叶子节点，完成递的过程。
+再通过completeUnitOfWork向上归，归的过程调用completeWork对子fiber节点生成实例并添加到父节点实例上，再不断更新workInProgress（先更新为兄弟节点，兄弟节点消费完，更新为父节点），从而又推进performUnitOfWork的调用。
+总之，performUnitOfWork负责向下递，由beginWork来消费更新WorkInProgress，到达叶子节点后，由completeUnitOfWork负责平铺或者向上归，由completeWork对子节点进行实例化(appendAllChildren)，然后消费更新workInProgress（兄弟节点，父节点）。由while循环推动performUnitOfWork完成fiber树的生成。
+
 ### mount
 
 生成fiber树
@@ -24,3 +34,9 @@ fiber树根节点hostRootFiber是由root节点(即hostRoot)产生，`hostRootFib
 - Placement： 节点插入或者移动
 - childDeletion: 节点的删除
   不包含属性变化的flag，即Update类副作用
+
+beginWork
+
+##### rollup相关
+
+`@rollup/plugin-replace`: 在打包构建过程中替换目标字符串
