@@ -1,18 +1,22 @@
 import { Props, Type } from 'shared/ReactTypes';
 
 export type ContainerType = any;
-export type Instance = HTMLElement | Text;
+export type Instance = any;
 
-export function createInstance(type: Type, props: Props): HTMLElement {
-	const ele = document.createElement(type);
-	for (const key in props) {
-		ele.setAttribute(key, props[key]);
-	}
-	return ele;
+export function createInstance(type: Type, props: Props): any {
+	console.log(type, props);
+
+	return {} as any;
 }
 
-export function createTextInstance(content: string | number): Text {
-	content = String(content);
-	const ele = document.createTextNode(content);
-	return ele;
+export function createTextInstance(content: string | number): any {
+	console.log(content);
+
+	return {} as any;
+}
+
+export function appendChildToContainer(...args: any) {
+	console.log(args);
+
+	return {} as any;
 }

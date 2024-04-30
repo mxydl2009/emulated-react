@@ -1,5 +1,7 @@
 import { beginWork } from './beginWork';
+import { commitMutationEffects } from './commitWork';
 import { completeWork } from './completeWork';
+import { MutationMask, NoFlags } from './fiberFlags';
 import { FiberNode, FiberRootNode, createWorkInProgress } from './fiberNode';
 import { HostRoot } from './workTag';
 
@@ -38,6 +40,8 @@ export function scheduleUpdateOnFiber(fiber: FiberNode) {
  * @param root FiberRoot
  */
 function prepareFreshStack(root: FiberRootNode) {
+	// createWorkInProgress方法根据初始的rootFiber创建workInProgress的rootFiber，当新的rootFiber
+	// 创建完成后，root.current将指向新的rootFiber，原来的rootFiber会被垃圾回收
 	workInProgress = createWorkInProgress(root.current, {});
 }
 /**
@@ -65,7 +69,40 @@ function renderRoot(root: FiberRootNode) {
 	root.finishedWork = finishedWork;
 
 	// 根据新的workInProgress树和副作用，执行DOM操作
-	// commitRoot(root);
+	commitRoot(root);
+}
+
+/**
+ * commit阶段的入口方法，执行具体的DOM操作
+ * beforeMutation、Mutation、layout三个阶段
+ * @param root
+ */
+function commitRoot(root: FiberRootNode) {
+	const finishedWork = root.finishedWork;
+	if (finishedWork === null) {
+		return;
+	}
+	if (__DEV__) {
+		console.log('commitRoot', finishedWork);
+	}
+	// 获取到finishedWork后重置
+	root.finishedWork = null;
+	// 判断三个子阶段是否需要各自的操作
+
+	const subtreeHasEffects =
+		(finishedWork.subtreeFlags & MutationMask) !== NoFlags;
+	const rootHasEffects = finishedWork.flags & MutationMask;
+	if (subtreeHasEffects || rootHasEffects) {
+		// 有副作用，需要进行副作用操作
+		// beforeMutation
+
+		// mutation
+		commitMutationEffects(finishedWork);
+		root.current = finishedWork;
+		// layout
+	} else {
+		root.current = finishedWork;
+	}
 }
 
 function workLoop() {

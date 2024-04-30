@@ -83,14 +83,14 @@ export class FiberRootNode {
 
 // 根据当前UI的fiber节点，创建一个新的fiber节点
 export const createWorkInProgress = (
-	// 当前的fiber节点
+	// hostRootFiber节点
 	current: FiberNode,
 	pendingProps: Props
 ): FiberNode => {
 	// 复用老的fiber节点
 	let wip = current.alternate;
 	if (wip === null) {
-		// mount, 而且只有rootFiber节点是fiber，子节点还是ReactElement
+		// mount, 而且只有hostRootFiber节点是fiber，子节点还是ReactElement
 		wip = new FiberNode(current.tag, pendingProps, current.key);
 		wip.stateNode = current.stateNode;
 		current.alternate = wip;
