@@ -39,10 +39,12 @@ export function getCommonPlugins(
 	return [
 		cjs(),
 		ts(tsconfig),
-		replace({}),
 		// 将__DEV__构建中替换为true
 		replace({
-			__DEV__: alias.__DEV__
+			values: {
+				__DEV__: alias.__DEV__
+			},
+			preventAssignment: true
 		})
 	];
 }

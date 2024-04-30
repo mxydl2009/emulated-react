@@ -4,7 +4,8 @@
 		"target": "es2015",
 		"lib": ["es2015", "dom"],
 		"paths": {
-			"hostConfig": ["packages/reconciler/src/hostConfig.ts"]
+			// 编辑器的导入路径指向，导入hostConfig时，指向packages/react-dom/src/hostConfig.ts
+			"hostConfig": ["packages/react-dom/src/hostConfig.ts"]
 		}
 	}
 }
