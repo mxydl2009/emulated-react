@@ -1,8 +1,14 @@
 import { ReactElementType } from 'packages/shared/ReactTypes';
 import { FiberNode } from './fiberNode';
 import { UpdateQueue, processUpdateQueue } from './updateQueue';
-import { HostComponent, HostRoot, HostText } from './workTag';
+import {
+	FunctionComponent,
+	HostComponent,
+	HostRoot,
+	HostText
+} from './workTag';
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
+import { renderWithHooks } from './fiberHooks';
 
 /**
  * 构造fiberNode的children，返回子FiberNode
@@ -15,6 +21,8 @@ export const beginWork = (wip: FiberNode) => {
 			return updateHostRoot(wip);
 		case HostComponent:
 			return updateHostComponent(wip);
+		case FunctionComponent:
+			return updateFunctionComponent(wip);
 		case HostText:
 			return null;
 		default:
@@ -25,6 +33,11 @@ export const beginWork = (wip: FiberNode) => {
 	}
 };
 
+function updateFunctionComponent(wip: FiberNode) {
+	const nextChildren = renderWithHooks(wip);
+	reconcileChildren(wip, nextChildren);
+	return wip.child;
+}
 // TODO:对于HostRoot，要根据baseState和updateQueue计算出新的state，再reconcile children
 // ???为什么hostRoot要计算状态？
 function updateHostRoot(wip: FiberNode) {

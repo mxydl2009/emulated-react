@@ -5,7 +5,12 @@ import {
 	createTextInstance
 } from 'hostConfig';
 import { FiberNode } from './fiberNode';
-import { HostComponent, HostRoot, HostText } from './workTag';
+import {
+	FunctionComponent,
+	HostComponent,
+	HostRoot,
+	HostText
+} from './workTag';
 import { NoFlags } from './fiberFlags';
 
 /**
@@ -16,6 +21,9 @@ export const completeWork = (wip: FiberNode) => {
 	const current = wip.alternate;
 
 	switch (wip.tag) {
+		case FunctionComponent:
+			bubbleProperties(wip);
+			return null;
 		case HostComponent:
 			if (current !== null && wip.stateNode) {
 				// update
