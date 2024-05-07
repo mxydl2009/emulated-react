@@ -37,14 +37,29 @@ reconciler的全局变量，用来指向当前待构建的fiber节点，while循
 
 beginWork
 
+## React-DOM
+
+React-DOM是reconciler与hostConfig打包构建的产物
+reconciler在构建时，不能包含React的内部数据共享层的代码(即reconciler导入的shared的internals文件，因为
+shared的internals同样导入自React)
+
 ## hooks
 
 问题1: hooks需要在函数的顶级作用域执行, 否则应该报错. 而且, 对于mount流程和update流程, hooks的逻辑也不尽相同. 因此, 对于hooks来说, 怎么能做到感知执行上下文呢? 或者说, hooks在执行的过程中, 是如何得知执行上下文?
-解答1: 在不同的上下文中, 执行的hook不是同一个函数. 在不同的上下文, 要实现不同的hook函数, 也就是说, 不同的上下文对应了不同的hooks集合. 如下图所示. reconciler可以获悉当前是mount还是update，因此具体的Hook实现是在reconciler中. Hook在reconciler中实现，但是在react中导入，因此，需要一个中间层用来存储当前使用的hooks集合,
-react指向当前使用的hooks，具体是哪个Hook执行由reconciler进行resolveHook来判定是哪个Hook.
+
+解答1: 在不同的上下文中, 执行的hook不是同一个函数. 在不同的上下文, 要实现不同的hook函数, 也就是说, 不同的上下文对应了不同的hooks集合. 如下图所示. reconciler可以获悉当前是mount还是update，因此具体的Hook实现是在reconciler中. Hook函数在reconciler中具体实现（会与fiber相关）。
+Hooks会在react中导入，React提供一个中间层用来存储当前使用的hooks集合, React中的Hook只是定义了一个很简单的函数，最核心的就是`resolveDispatcher`用来解析出到底使用哪个hooks集合，然后再调用解析后的Hook函数。
 
 ![hooks集合映射图](imags/hooks集合映射图.png)
 hooks集合映射图
+
+问题2： Hook如何记录自身的数据
+解答2： hook是一种数据结构，每个Hook数据结构会与use...的函数进行对应（链表结构顺序对应），Hook将自身的数据记录在当前组件(fiber节点的memoizedState)上。
+
+### mount阶段
+
+在函数式组件调用前，将当前Hooks集合赋值为正确的Hooks集合(`currentDispatcher.current = dispatcher`);
+在函数组件调用内部，Hook函数调用时，获取对应的Hook数据结构(如果没有就会创建Hook，将Hook记录在fiber节点上，构建Hook链表，返回对应的Hook，这样记录在Hook上的数据就会保存下来，方便update阶段或者其他时候使用)
 
 ##### rollup相关
 
