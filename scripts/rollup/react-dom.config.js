@@ -3,7 +3,7 @@ import { resolvePkgPath, getPkgJson, getCommonPlugins } from '../utils';
 import generatePkg from 'rollup-plugin-generate-package-json';
 import alias from '@rollup/plugin-alias';
 
-const { name, module } = getPkgJson('react-dom');
+const { name, module, peerDependencies } = getPkgJson('react-dom');
 
 const sourcePkgPath = resolvePkgPath(name);
 
@@ -52,6 +52,8 @@ export default [
 					main: 'index.js'
 				})
 			})
-		]
+		],
+		// 不参与打包的外部依赖，这里指定了react
+		external: [...Object.keys(peerDependencies)]
 	}
 ];
