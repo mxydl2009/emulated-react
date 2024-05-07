@@ -61,6 +61,30 @@ hooks集合映射图
 在函数式组件调用前，将当前Hooks集合赋值为正确的Hooks集合(`currentDispatcher.current = dispatcher`);
 在函数组件调用内部，Hook函数调用时，获取对应的Hook数据结构(如果没有就会创建Hook，将Hook记录在fiber节点上，构建Hook链表，返回对应的Hook，这样记录在Hook上的数据就会保存下来，方便update阶段或者其他时候使用)
 
+## 调试方法
+
+### 打包构建为production产物，在真实环境下调试
+
+这种方式可以最大程度模拟源码项目与真实react的对比，但不够灵活，每次有更改都需要重新打包构建。
+
+1. 构建
+   使用Rollup将项目打包构建为production产物，例如构建目录为`dist/node_modules/{package_name}`，react构建在`dist/node_modules/react`, react-dom构建在`dist/node_modules/react-dom`。
+2. 创建项目
+   使用create-react-app创建一个真实项目.
+
+3. link项目，替代真实的react
+
+- 3.1 在源码项目的`dist/node_modules/react`和`dist/node_modules/react-dom`下，分别`pnpm link --global`，将当前链接软链到全局；
+- 3.2 在真实项目下，使用`pnpm link react --global`和`pnpm link react-dom --global`将真实项目的react依赖指向全局的react软链接，此时真实项目使用的react即为源码项目的构建产物；
+
+### 使用vite进行非打包构建的实时调试
+
+vite在开发环境下不再进行打包构建，所以调试时速度很快。
+vite的插件体系与Rollup的插件体系是兼容的，也方便直接复用Rollup的插件；
+使用vite即可在源码目录下创建vite项目，直接导入react和react-dom进行调试；但是需要配置一下react和react-dom的解析路径，替换为源码项目的react和react-dom，包括hostConfig
+
+一直报错: 服务端错误，从main.ts中`import { jsxDEV } from 'react/jsx-dev-rumtime`，文件找不到
+
 ##### rollup相关
 
 `@rollup/plugin-replace`: 在打包构建过程中替换目标字符串
