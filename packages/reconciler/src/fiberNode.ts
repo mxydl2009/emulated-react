@@ -119,7 +119,6 @@ export function createFiberFromElement(element: ReactElementType) {
 	if (typeof type === 'string') {
 		tag = HostComponent;
 	} else if (typeof type !== 'function') {
-		// @ts-expect-error: 不知道为什么__DEV__会找不到
 		if (__DEV__) {
 			console.warn('unKnown type.');
 		}
