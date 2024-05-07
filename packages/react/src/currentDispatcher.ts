@@ -1,4 +1,4 @@
-import { Action } from 'packages/shared/ReactTypes';
+import { Action } from 'shared/ReactTypes';
 
 // Dispatcher是所有的Hooks集合，在源码里，hook都是dispatch函数
 export interface Dispatcher {

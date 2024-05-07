@@ -1,5 +1,5 @@
 import { ContainerType } from 'hostConfig';
-import { ReactElementType } from 'packages/shared/ReactTypes';
+import { ReactElementType } from 'shared/ReactTypes';
 import {
 	createContainer,
 	updateContainer

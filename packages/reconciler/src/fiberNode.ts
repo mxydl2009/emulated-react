@@ -2,7 +2,7 @@ import { FunctionComponent, WorkTag, HostComponent } from './workTag';
 import { Props, Key, Ref, ReactElementType } from 'shared/ReactTypes';
 import { Flags, NoFlags } from './fiberFlags';
 import { ContainerType } from 'hostConfig';
-// import { UpdateQueue } from './updateQueue';÷
+// import { UpdateQueue } from './updateQueue';
 
 // FiberNode既作为数据存储的单元，也作为工作单元
 export class FiberNode {
@@ -10,18 +10,18 @@ export class FiberNode {
 	tag: WorkTag;
 	key: Key;
 	pendingProps: Props;
-	ref: Ref;
-	memoizedProps: Props;
+	ref: Ref | null;
+	memoizedProps: Props | null;
 	memoizedState: any;
 
 	stateNode: any;
 
-	return: FiberNode;
-	sibling: FiberNode;
-	child: FiberNode;
+	return: FiberNode | null;
+	sibling: FiberNode | null;
+	child: FiberNode | null;
 	index: number;
 	// 指向对应的FiberNode，双缓存技术
-	alternate: FiberNode;
+	alternate: FiberNode | null;
 	// 存储副作用标识
 	flags: Flags;
 	// 存储子树的副作用
@@ -110,7 +110,7 @@ export const createWorkInProgress = (
 };
 
 /**
- * 根据reactelement创建Fiber节点
+ * 根据react element创建Fiber节点
  * @param element
  */
 export function createFiberFromElement(element: ReactElementType) {
@@ -119,6 +119,7 @@ export function createFiberFromElement(element: ReactElementType) {
 	if (typeof type === 'string') {
 		tag = HostComponent;
 	} else if (typeof type !== 'function') {
+		// @ts-expect-error: 不知道为什么__DEV__会找不到
 		if (__DEV__) {
 			console.warn('unKnown type.');
 		}
