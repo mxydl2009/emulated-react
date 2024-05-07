@@ -46,7 +46,8 @@ export const completeWork = (wip: FiberNode) => {
 			}
 			return null;
 		case HostRoot:
-			break;
+			bubbleProperties(wip);
+			return null;
 		default:
 			if (__DEV__) {
 				console.warn('completeWork未实现的类型', wip.tag);
