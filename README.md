@@ -37,6 +37,15 @@ reconciler的全局变量，用来指向当前待构建的fiber节点，while循
 
 beginWork
 
+## hooks
+
+问题1: hooks需要在函数的顶级作用域执行, 否则应该报错. 而且, 对于mount流程和update流程, hooks的逻辑也不尽相同. 因此, 对于hooks来说, 怎么能做到感知执行上下文呢? 或者说, hooks在执行的过程中, 是如何得知执行上下文?
+解答1: 在不同的上下文中, 执行的hook不是同一个函数. 在不同的上下文, 要实现不同的hook函数, 也就是说, 不同的上下文对应了不同的hooks集合. 如下图所示. reconciler可以获悉当前是mount还是update，因此具体的Hook实现是在reconciler中. Hook在reconciler中实现，但是在react中导入，因此，需要一个中间层用来存储当前使用的hooks集合,
+react指向当前使用的hooks，具体是哪个Hook执行由reconciler进行resolveHook来判定是哪个Hook.
+
+![hooks集合映射图](imags/hooks集合映射图.png)
+hooks集合映射图
+
 ##### rollup相关
 
 `@rollup/plugin-replace`: 在打包构建过程中替换目标字符串
