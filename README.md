@@ -85,6 +85,21 @@ vite的插件体系与Rollup的插件体系是兼容的，也方便直接复用R
 
 一直报错: 服务端错误，从main.ts中`import { jsxDEV } from 'react/jsx-dev-rumtime`，文件找不到
 
+### 使用React官方测试用例进行测试
+
+#### 实现官方的测试工具test-utils
+
+官方的是ReactTestUtils.js文件：使用ReactDOM作为宿主环境，因此自己实现的测试工具也放在react-dom包里
+test-utils.ts文件是我们自己的测试工具，对外暴露一个renderIntoDocument的方法
+
+#### 实现测试环境
+
+安装依赖: `pnpm i -D -w jest jest-config jest-environment-jsdom`
+
+#### 实现ReactElement测试用例
+
+在react的包下添加`__tests__`，添加ReactElement-test.js的测试用例文件
+
 ##### rollup相关
 
 `@rollup/plugin-replace`: 在打包构建过程中替换目标字符串

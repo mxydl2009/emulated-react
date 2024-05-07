@@ -17,6 +17,7 @@ export default defineConfig({
 		}),
 		replace({
 			values: {
+				// @ts-ignore
 				__DEV__: true
 			},
 			preventAssignment: true
@@ -26,16 +27,16 @@ export default defineConfig({
 		alias: [
 			{
 				find: 'react',
-				replacement: resolvePkgPath('react')
+				replacement: resolvePkgPath('react', false)
 			},
 			{
 				find: 'react-dom',
-				replacement: resolvePkgPath('react-dom')
+				replacement: resolvePkgPath('react-dom', false)
 			},
 			{
 				find: 'hostConfig',
 				replacement: path.resolve(
-					resolvePkgPath('react-dom'),
+					resolvePkgPath('react-dom', false),
 					'./src/hostConfig.ts'
 				)
 			}

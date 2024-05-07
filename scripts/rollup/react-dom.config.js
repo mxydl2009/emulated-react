@@ -55,5 +55,21 @@ export default [
 		],
 		// 不参与打包的外部依赖，这里指定了react
 		external: [...Object.keys(peerDependencies)]
+	},
+	{
+		input: `${sourcePkgPath}/test-utils.ts`,
+		// 产物有两个，一个是index.js，一个是client.js(为了兼容react18，因为react18导出的是client.js)
+		output: [
+			{
+				// 打包产物chunk写入的文件名，chunk只有一个时用file字段，两个以上的chunks要使用dir字段
+				file: `${distPkgPath}/test-utils.js`,
+				// 指定打包产物运行时对外暴露的全局变量名（针对iife和umd）
+				name: 'testUtils',
+				format: 'umd'
+			}
+		],
+		plugins: [...getCommonPlugins()],
+		// 不参与打包的外部依赖，这里指定了react
+		external: ['react', 'react-dom']
 	}
 ];

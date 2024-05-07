@@ -33,7 +33,7 @@ export function getPkgJson(pkgName) {
 export function getCommonPlugins(
 	tsconfig = {},
 	alias = {
-		__DEV__: process.env.NODE_ENV === 'development' ? true : false
+		__DEV__: true
 	}
 ) {
 	return [
