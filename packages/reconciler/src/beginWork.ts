@@ -76,7 +76,9 @@ function reconcileChildren(
 ) {
 	const current = wip.alternate;
 	if (current !== null) {
-		// update
+		// update, 首屏渲染(mount)时只有hostRoot会走该分支,
+		// 因为createWorkInProgress创建了hostRootFiber的alternate
+		// 因此, hostRoot的子节点（也就是App根组件节点）会触发收集副作用的逻辑，从而将离屏DOM挂载到DOM树上
 		wip.child = reconcileChildFibers(wip, current, children);
 	} else {
 		// mount

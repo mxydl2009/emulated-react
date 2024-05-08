@@ -72,15 +72,15 @@ function appendAllChildren(parent: Instance, wip: FiberNode) {
 			node = node.child;
 			continue;
 		}
-		// TODO: 感觉下面这行代码没有什么意义,因为node是子节点，最后一个节点要进入node.sibling === null的分支
+		// 当node是当前父节点时，返回(node会在处理完子节点和兄弟节点后，返回到父节点上，所以需要判断是否父节点)
 		if (node === wip) return;
-		// 先判断是否是最后一个兄弟节点
-		if (node.sibling === null) {
-			// 最后一个兄弟节点，要向上归了
-			node = node.return;
+		// 这里必须用while循环来判断是否是最后一个兄弟节点，因为涉及到组件节点嵌套
+		while (node.sibling === null) {
 			if (node === null || node === wip) {
 				return;
 			}
+			// 最后一个兄弟节点，要向上归了
+			node = node?.return;
 		}
 		// 不是最后一个兄弟节点，那么就把node赋值为兄弟节点，继续循环
 		node.sibling.return = node.return;
