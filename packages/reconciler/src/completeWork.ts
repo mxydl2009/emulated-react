@@ -32,8 +32,8 @@ export const completeWork = (wip: FiberNode) => {
 				const instance = createInstance(wip.type, newProps);
 				appendAllChildren(instance, wip);
 				wip.stateNode = instance;
-				bubbleProperties(wip);
 			}
+			bubbleProperties(wip);
 			return null;
 		case HostText:
 			if (current !== null && wip.stateNode) {
@@ -47,8 +47,8 @@ export const completeWork = (wip: FiberNode) => {
 				// mount
 				const instance = createTextInstance(newProps.content);
 				wip.stateNode = instance;
-				bubbleProperties(wip);
 			}
+			bubbleProperties(wip);
 			return null;
 		case HostRoot:
 			bubbleProperties(wip);

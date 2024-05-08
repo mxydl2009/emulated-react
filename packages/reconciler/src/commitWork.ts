@@ -58,9 +58,9 @@ function commitMutationEffectsOnFiber(finishedWork: FiberNode) {
 		finishedWork.flags &= ~Placement;
 	}
 	if ((flags & Update) !== NoFlags) {
-		// 有Placement的副作用，则执行
+		// 有Update的副作用，则执行
 		commitUpdate(finishedWork);
-		finishedWork.flags &= ~Placement;
+		finishedWork.flags &= ~Update;
 	}
 	if ((flags & ChildDeletion) !== NoFlags) {
 		const deletions = finishedWork.deletions;
