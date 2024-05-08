@@ -84,6 +84,20 @@ hooks集合映射图
 在函数式组件调用前，将当前Hooks集合赋值为正确的Hooks集合(`currentDispatcher.current = dispatcher`);
 在函数组件调用内部，Hook函数调用时，获取对应的Hook数据结构(如果没有就会创建Hook，将Hook记录在fiber节点上，构建Hook链表，返回对应的Hook，这样记录在Hook上的数据就会保存下来，方便update阶段或者其他时候使用)
 
+## 事件系统
+
+事件系统与宿主环境有关，所以实现事件系统应该在react-dom中，与reconciler无关；
+
+- 模拟浏览器的捕获、冒泡
+- 实现合成事件对象
+- 方便扩展：实现事件优先级等等
+
+事件回调函数保存在组件props上（reconciler包），为了0侵入reconciler，在react-dom中，将事件回调保存在
+DOM对象的自定义属性上，所以需要一个方法将组件props上的事件回调保存到DOM对象上。
+
+- 在创建instance时保存到instance上
+- 在更新时更新事件回调保存到instance上
+
 ## 调试方法
 
 ### 打包构建为production产物，在真实环境下调试
