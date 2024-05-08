@@ -44,7 +44,10 @@ export function renderWithHooks(wip: FiberNode) {
 	}
 	const component = wip.type;
 	const children = component(wip.pendingProps);
+	// reset global variables
 	currentlyRenderingFiber = null;
+	workInProgressHook = null;
+	currentHook = null;
 	return children;
 }
 
