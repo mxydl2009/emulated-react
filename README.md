@@ -21,7 +21,7 @@ reconciler的全局变量，用来指向当前待构建的fiber节点，while循
 再通过completeUnitOfWork向上归，归的过程调用completeWork对子fiber节点生成实例并添加到父节点实例上，再不断更新workInProgress（先更新为兄弟节点，兄弟节点消费完，更新为父节点），从而又推进performUnitOfWork的调用。
 总之，performUnitOfWork负责向下递，由beginWork来消费更新WorkInProgress，到达叶子节点后，由completeUnitOfWork负责平铺或者向上归，由completeWork对子节点进行实例化(appendAllChildren)，然后消费更新workInProgress（兄弟节点，父节点）。由while循环推动performUnitOfWork完成fiber树的生成。
 
-### mount
+### mount流程
 
 生成fiber树
 标记flag副作用
@@ -36,6 +36,16 @@ reconciler的全局变量，用来指向当前待构建的fiber节点，while循
   不包含属性变化的flag，即Update类副作用
 
 beginWork
+
+### update流程
+
+#### beginWork
+
+同样是生成fiber树，标记副作用，但是生成fiber树的时候，需要根据key和type考虑是否可以复用原fiber节点
+
+- key和type都相同，可复用
+- key不同或者type不同，不可复用
+- 不可复用的节点，则要删除，然后创建新的节点
 
 ## React-DOM
 

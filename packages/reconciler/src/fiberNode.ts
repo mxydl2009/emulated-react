@@ -27,6 +27,8 @@ export class FiberNode {
 	// 存储子树的副作用
 	subtreeFlags: Flags;
 	updateQueue: unknown | null;
+	// 存储需要删除的子节点
+	deletions: FiberNode[] | null;
 	/**
 	 *
 	 * @param tag 区分组件的类型，函数组件，类组件，host组件，hostRoot等等
@@ -59,6 +61,7 @@ export class FiberNode {
 		this.flags = NoFlags;
 		this.subtreeFlags = NoFlags;
 		this.updateQueue = null;
+		this.deletions = null;
 	}
 }
 
@@ -100,6 +103,7 @@ export const createWorkInProgress = (
 		wip.pendingProps = pendingProps;
 		// 清除老节点的副作用
 		wip.flags = NoFlags;
+		wip.deletions = null;
 	}
 	// TODO: 复用老节点的属性(究竟应该复用哪些属性)
 	wip.type = current.type;

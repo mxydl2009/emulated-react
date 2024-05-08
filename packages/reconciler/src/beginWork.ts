@@ -72,7 +72,7 @@ function updateHostComponent(wip: FiberNode) {
  */
 function reconcileChildren(
 	wip: FiberNode,
-	children: ReactElementType[] | null
+	children: ReactElementType | ReactElementType[] | null
 ) {
 	const current = wip.alternate;
 	if (current !== null) {
