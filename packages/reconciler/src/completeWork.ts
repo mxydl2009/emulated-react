@@ -11,7 +11,7 @@ import {
 	HostRoot,
 	HostText
 } from './workTag';
-import { NoFlags } from './fiberFlags';
+import { NoFlags, Update } from './fiberFlags';
 
 /**
  * 将子节点的实例挂载到父实例上
@@ -38,6 +38,11 @@ export const completeWork = (wip: FiberNode) => {
 		case HostText:
 			if (current !== null && wip.stateNode) {
 				// update
+				const oldText = current.memoizedProps.content;
+				const newText = newProps.content;
+				if (oldText !== newText) {
+					markUpdate(wip);
+				}
 			} else {
 				// mount
 				const instance = createTextInstance(newProps.content);
@@ -105,4 +110,12 @@ function bubbleProperties(wip: FiberNode) {
 		child = child.sibling;
 	}
 	wip.subtreeFlags |= subtreeFlags;
+}
+
+/**
+ * 标记更新flag
+ * @param wip
+ */
+function markUpdate(wip: FiberNode) {
+	wip.flags |= Update;
 }
