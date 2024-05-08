@@ -1,7 +1,23 @@
-import { ContainerType, appendChildToContainer } from 'hostConfig';
-import { MutationMask, NoFlags, Placement } from './fiberFlags';
+import {
+	ContainerType,
+	appendChildToContainer,
+	commitUpdate,
+	removeChild
+} from 'hostConfig';
+import {
+	ChildDeletion,
+	MutationMask,
+	NoFlags,
+	Placement,
+	Update
+} from './fiberFlags';
 import { FiberNode, FiberRootNode } from './fiberNode';
-import { HostComponent, HostRoot, HostText } from './workTag';
+import {
+	FunctionComponent,
+	HostComponent,
+	HostRoot,
+	HostText
+} from './workTag';
 
 let nextEffect: FiberNode | null = null;
 
@@ -40,6 +56,20 @@ function commitMutationEffectsOnFiber(finishedWork: FiberNode) {
 		// 有Placement的副作用，则执行
 		commitPlacement(finishedWork);
 		finishedWork.flags &= ~Placement;
+	}
+	if ((flags & Update) !== NoFlags) {
+		// 有Placement的副作用，则执行
+		commitUpdate(finishedWork);
+		finishedWork.flags &= ~Placement;
+	}
+	if ((flags & ChildDeletion) !== NoFlags) {
+		const deletions = finishedWork.deletions;
+		if (deletions !== null) {
+			deletions.forEach((childToDelete) => {
+				commitDeletion(childToDelete);
+			});
+		}
+		finishedWork.flags &= ~ChildDeletion;
 	}
 }
 
@@ -86,5 +116,88 @@ function appendPlacementNodeIntoContainer(
 			appendPlacementNodeIntoContainer(sibling, hostParent);
 			sibling = sibling.sibling;
 		}
+	}
+}
+
+/**
+ * 删除子节点, 即要删除子树，子树内的节点都需要进行不同的处理，所以需要向下遍历子树，与beginWork的流程一致
+ * 1. 对于FC组件，要处理useEffect的清除副作用函数
+ * 2. 对于hostComponent，要解绑ref
+ * 3. 对于子树需要找到根hostComponent, 移除DOM
+ * @param childToDelete
+ */
+function commitDeletion(childToDelete: FiberNode) {
+	let rootHostNode = null;
+
+	commitNestedComponent(childToDelete, (unmountFiber) => {
+		switch (unmountFiber.tag) {
+			case HostComponent:
+				// 1. 对于hostComponent，要解绑ref
+				// commitDeletionHostComponent(unmountFiber);
+				// 2. 赋值rootHostComponent
+				if (rootHostNode === null) {
+					rootHostNode = unmountFiber;
+				}
+
+				break;
+			case HostText:
+				// 因此组件的根节点一定是一个，而不是有多个
+				if (rootHostNode === null) {
+					rootHostNode = unmountFiber;
+				}
+				break;
+			case FunctionComponent:
+				// 1. 对于FC组件，要处理useEffect的清除副作用函数
+				// commitUnmount(unmountFiber);
+				break;
+			default:
+				if (__DEV__) {
+					console.warn('未处理的unmount类型', unmountFiber);
+				}
+		}
+	});
+
+	if (rootHostNode !== null) {
+		// 3. 对于子树需要找到根hostComponent, 移除DOM
+		const hostParent = getHostParent(childToDelete);
+		if (hostParent !== null) {
+			removeChild(rootHostNode, hostParent);
+		}
+	}
+	// 脱离fiber树 TODO: 兄弟节点关系需不需要重置？这里重置fiber的意义是什么
+	childToDelete.return = null;
+	childToDelete.child = null;
+}
+
+/**
+ *
+ * @param root 子树的根节点
+ * @param onCommitUnmount 遍历子树的回调，用于根据节点类型做相对应的处理
+ * @returns
+ */
+function commitNestedComponent(root: FiberNode, onCommitUnmount) {
+	let node = root;
+	while (true) {
+		onCommitUnmount(node);
+		if (node.child !== null) {
+			node.child.return = node;
+			node = node.child;
+			continue;
+		}
+
+		if (node === root) {
+			return;
+		}
+
+		// 向上归，所以要node.sibling === null的循环
+		while (node.sibling === null) {
+			if (node.return === null || node.return === root) {
+				return;
+			}
+			node = node.return;
+		}
+
+		node.sibling.return = node.return;
+		node = node.sibling;
 	}
 }

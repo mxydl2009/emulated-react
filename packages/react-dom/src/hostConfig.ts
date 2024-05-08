@@ -1,3 +1,5 @@
+import { FiberNode } from 'reconciler/src/fiberNode';
+import { HostText } from 'reconciler/src/workTag';
 import { Props, Type } from 'shared/ReactTypes';
 
 export type ContainerType = Element;
@@ -27,4 +29,28 @@ export function appendChildToContainer(
 	parent: Instance | ContainerType
 ) {
 	parent.appendChild(child);
+}
+
+export function commitUpdate(fiber: FiberNode) {
+	switch (fiber.tag) {
+		// 需要使用花括号来包裹声明的变量，否则eslint会报错
+		case HostText: {
+			const text = fiber.memoizedProps.content;
+			return commitTextUpdate(fiber.stateNode, text);
+		}
+
+		default:
+			if (__DEV__) {
+				console.warn('commitUpdate未实现的类型', fiber.tag);
+			}
+			break;
+	}
+}
+
+function commitTextUpdate(textInstance: Text, content: string | number) {
+	textInstance.textContent = String(content);
+}
+
+export function removeChild(child: Element | Text, container: Element) {
+	container.removeChild(child);
 }

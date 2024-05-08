@@ -15,8 +15,10 @@ export const createUpdate = <State>(action: Action<State>): Update<State> => {
 
 export interface UpdateQueue<State> {
 	shared: {
+		// 存储新的更新
 		pending: Update<State> | null;
 	};
+	// 存储触发更新的方法
 	dispatch: Dispatch<State>;
 }
 

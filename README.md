@@ -47,6 +47,17 @@ beginWork
 - key不同或者type不同，不可复用
 - 不可复用的节点，则要删除，然后创建新的节点
 
+#### hooks
+
+**更新阶段的Hook结构从哪里查找？**
+mount阶段的Hook都是新建的，由fiber节点的memoizedState保存Hook链表。而更新阶段需要重建fiber树，所以
+新fiber上肯定找不到Hook数据，因此Hook数据要到currentFiber上找。
+
+触发更新的情况
+
+- 交互时触发
+- render方法执行时触发（该情况需要阻止无限循环render）
+
 ## React-DOM
 
 React-DOM是reconciler与hostConfig打包构建的产物
@@ -54,6 +65,8 @@ reconciler在构建时，不能包含React的内部数据共享层的代码(即r
 shared的internals同样导入自React)
 
 ## hooks
+
+hook函数的执行流程：寻找对应的Hook数据 -> 根据hook数据计算出新数据 -> 返回新数据和dispatch
 
 问题1: hooks需要在函数的顶级作用域执行, 否则应该报错. 而且, 对于mount流程和update流程, hooks的逻辑也不尽相同. 因此, 对于hooks来说, 怎么能做到感知执行上下文呢? 或者说, hooks在执行的过程中, 是如何得知执行上下文?
 
