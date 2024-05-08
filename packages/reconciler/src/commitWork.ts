@@ -161,7 +161,7 @@ function commitDeletion(childToDelete: FiberNode) {
 		// 3. 对于子树需要找到根hostComponent, 移除DOM
 		const hostParent = getHostParent(childToDelete);
 		if (hostParent !== null) {
-			removeChild(rootHostNode, hostParent);
+			removeChild(rootHostNode.stateNode, hostParent);
 		}
 	}
 	// 脱离fiber树 TODO: 兄弟节点关系需不需要重置？这里重置fiber的意义是什么
