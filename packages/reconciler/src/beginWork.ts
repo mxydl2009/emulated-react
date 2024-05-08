@@ -31,6 +31,7 @@ export const beginWork = (wip: FiberNode) => {
 			}
 			break;
 	}
+	return null;
 };
 
 function updateFunctionComponent(wip: FiberNode) {
@@ -65,7 +66,7 @@ function updateHostComponent(wip: FiberNode) {
 }
 
 /**
- * 通过fiber的alternate(也就是老的fiber)与ReacdtElement进行对比，来生成新的fiber
+ * 通过fiber的alternate(也就是老的fiber)与React Element进行对比，来生成新的fiber
  * @param wip
  * @param children
  */

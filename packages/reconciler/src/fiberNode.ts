@@ -93,6 +93,7 @@ export const createWorkInProgress = (
 		// mount, 而且只有hostRootFiber节点是fiber，子节点还是ReactElement
 		wip = new FiberNode(current.tag, pendingProps, current.key);
 		wip.stateNode = current.stateNode;
+		wip.alternate = current;
 		current.alternate = wip;
 	} else {
 		// update

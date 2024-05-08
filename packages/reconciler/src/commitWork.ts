@@ -11,7 +11,11 @@ export const commitMutationEffects = (finishedWork: FiberNode) => {
 	nextEffect = finishedWork;
 	while (nextEffect !== null) {
 		const child: FiberNode | null = nextEffect.child;
-		if (child !== null && (child?.subtreeFlags & MutationMask) !== NoFlags) {
+		// 当前fiber节点的子树上有副作用, 则继续向下遍历,否则向上
+		if (
+			(nextEffect.subtreeFlags & MutationMask) !== NoFlags &&
+			child !== null
+		) {
 			nextEffect = child;
 		} else {
 			// 要么找到叶子节点，要么找到非副作用的子树，可以回退了
