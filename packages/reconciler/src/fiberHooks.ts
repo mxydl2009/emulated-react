@@ -31,6 +31,7 @@ export interface Hook {
 export function renderWithHooks(wip: FiberNode) {
 	currentlyRenderingFiber = wip;
 	workInProgressHook = null;
+	currentHook = null;
 
 	const current = wip.alternate;
 
