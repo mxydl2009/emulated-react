@@ -12,7 +12,7 @@ import {
 	HostText
 } from './workTag';
 import { NoFlags, Update } from './fiberFlags';
-import { updateFiberPropsToIntance } from 'react-dom/src/syntheticEvent';
+import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
 
 /**
  * 将子节点的实例挂载到父实例上
@@ -31,7 +31,7 @@ export const completeWork = (wip: FiberNode) => {
 				// TODO: 判断属性的变化，变化了则标记更新，在commitUpdate中更新属性变化
 				// 可以在fiberNode.updateQueue中记录变化的属性，然后在commit阶段更新
 				// 下面的方法是偷懒简化的，直接将所有属性重新保存到实例上， 只是方便实现事件系统。
-				updateFiberPropsToIntance(wip.stateNode, newProps);
+				updateFiberPropsToInstance(wip.stateNode, newProps);
 			} else {
 				// mount
 				const instance = createInstance(wip.type, newProps);

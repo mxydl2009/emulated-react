@@ -1,7 +1,7 @@
 import { FiberNode } from 'reconciler/src/fiberNode';
 import { HostText } from 'reconciler/src/workTag';
 import { Props, Type } from 'shared/ReactTypes';
-import { updateFiberPropsToIntance } from './syntheticEvent';
+import { updateFiberPropsToInstance } from './syntheticEvent';
 import { DOMElement } from './syntheticEvent';
 
 export type ContainerType = Element;
@@ -9,7 +9,7 @@ export type Instance = Element;
 
 export function createInstance(type: Type, props: Props): any {
 	const element = document.createElement(type) as unknown;
-	updateFiberPropsToIntance(element as DOMElement, props);
+	updateFiberPropsToInstance(element as DOMElement, props);
 	return element;
 }
 

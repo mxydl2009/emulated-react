@@ -27,7 +27,7 @@ const validEventList = ['click'];
  * @param node
  * @param props
  */
-export function updateFiberPropsToIntance(node: DOMElement, props: Props) {
+export function updateFiberPropsToInstance(node: DOMElement, props: Props) {
 	node[elementPropsKey] = props;
 }
 

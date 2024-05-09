@@ -44,25 +44,41 @@ function childReconciler(shouldTrackEffects: boolean) {
 		cloneFiber.index = 0;
 		return cloneFiber;
 	}
+
+	function deleteRemainingChildren(
+		returnFiber: FiberNode,
+		childToDelete: FiberNode
+	) {
+		if (!shouldTrackEffects) return;
+		while (childToDelete !== null) {
+			deleteChild(returnFiber, childToDelete);
+			childToDelete = childToDelete.sibling;
+		}
+	}
+
 	function reconcileSingleElement(
 		returnFiber: FiberNode,
 		currentFiber: FiberNode | null,
 		element: ReactElementType
 	) {
 		const key = element.key;
-		if (currentFiber !== null) {
+		while (currentFiber !== null) {
 			// update
 			if (currentFiber.key === key) {
 				// key相同
 				if (element.$$typeof === REACT_ELEMENT_TYPE) {
 					if (currentFiber.type === element.type) {
-						// type相同 直接复用, 返回节点
+						// type相同 直接复用, 返回节点, 标记剩下的节点要删除
 						const cloneFiber = reuseFiber(currentFiber, element.props);
 						cloneFiber.return = returnFiber;
+						// TODO: 是不是需要检查一下复用的节点是否有属性更新？
+						// completeWork会回到每个生成的节点中，再进行属性上的diff来确定是否有属性更新
+						deleteRemainingChildren(returnFiber, currentFiber.sibling);
 						return cloneFiber;
 					} else {
-						// type不同 删除
-						deleteChild(returnFiber, currentFiber);
+						// type不同 删除所有的节点，break，创建新节点
+						deleteRemainingChildren(returnFiber, currentFiber);
+						break;
 					}
 				} else {
 					if (__DEV__) {
@@ -71,7 +87,9 @@ function childReconciler(shouldTrackEffects: boolean) {
 					}
 				}
 			} else {
+				// key不同，删除当前fiber，继续遍历
 				deleteChild(returnFiber, currentFiber);
+				currentFiber = currentFiber.sibling;
 			}
 		}
 		const child = createFiberFromElement(element);
@@ -84,16 +102,18 @@ function childReconciler(shouldTrackEffects: boolean) {
 		currentFiber: FiberNode | null,
 		content: string | number
 	) {
-		if (currentFiber !== null) {
+		while (currentFiber !== null) {
 			// update
 			if (currentFiber.tag === HostText) {
 				// tag相同，说明都是文本节点，复用
 				const cloneFiber = reuseFiber(currentFiber, { content });
 				cloneFiber.return = returnFiber;
+				deleteRemainingChildren(returnFiber, currentFiber.sibling);
 				return cloneFiber;
 			} else {
-				// 不能复用，删除
+				// 不能复用，删除节点，继续遍历
 				deleteChild(returnFiber, currentFiber);
+				currentFiber = currentFiber.sibling;
 			}
 		}
 		const child = new FiberNode(HostText, { content }, null);
