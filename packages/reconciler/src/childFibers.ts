@@ -288,7 +288,7 @@ function childReconciler(shouldTrackEffects: boolean) {
 			console.warn('未实现的类型', newChild);
 		}
 		if (newChild === null && currentFiber !== null) {
-			deleteChild(returnFiber, currentFiber);
+			deleteRemainingChildren(returnFiber, currentFiber);
 		}
 		return returnFiber.child;
 	};
