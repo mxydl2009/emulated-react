@@ -86,11 +86,12 @@ function appendAllChildren(parent: Instance, wip: FiberNode) {
 		if (node === wip) return;
 		// 这里必须用while循环来判断是否是最后一个兄弟节点，因为涉及到组件节点嵌套
 		while (node.sibling === null) {
-			if (node === null || node === wip) {
+			// 向上找直到找到wip的最后一个子节点
+			if (node.return === null || node.return === wip) {
 				return;
 			}
 			// 最后一个兄弟节点，要向上归了
-			node = node?.return;
+			node = node.return;
 		}
 		// 不是最后一个兄弟节点，那么就把node赋值为兄弟节点，继续循环
 		node.sibling.return = node.return;
