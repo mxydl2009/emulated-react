@@ -1,7 +1,9 @@
 import {
 	ContainerType,
+	Instance,
 	appendChildToContainer,
 	commitUpdate,
+	insertChildToContainer,
 	removeChild
 } from 'hostConfig';
 import {
@@ -78,9 +80,13 @@ function commitPlacement(finishedWork: FiberNode) {
 		console.log('commitPlacement', finishedWork);
 	}
 	const hostParent = getHostParent(finishedWork);
+
+	// hostSibling: 用于进行节点插入
+	const sibling = getHostSibling(finishedWork);
+
 	// hostParent为null的情况，说明finishedWork是rootFiber了，不需要再插入
 	if (hostParent !== null) {
-		appendPlacementNodeIntoContainer(finishedWork, hostParent);
+		insertOrAppendPlacementNodeIntoContainer(finishedWork, hostParent, sibling);
 	}
 }
 
@@ -100,20 +106,83 @@ function getHostParent(finishedWork: FiberNode) {
 	return null;
 }
 
-function appendPlacementNodeIntoContainer(
+/**
+ * 查找稳定的可作为host的兄弟节点
+ * 1. 如果有兄弟节点
+ *   1.1 兄弟节点是host类型，返回
+ *   1.2 兄弟节点不是host类型，则从第一个兄弟节点开始向下找，找不到再返回从第二个兄弟节点依次查找
+ * 2. 如果没有兄弟节点
+ *   2.1 向上查找父节点，如果父节点是host类型，返回
+ *   2.2 父节点不是host类型，继续按照1来查找
+ * 3. 稳定的节点：不进行Placement的节点
+ * @param fiber
+ */
+function getHostSibling(fiber: FiberNode) {
+	let node: FiberNode = fiber;
+	FindSibling: while (true) {
+		// 先向上查找一步，再找兄弟节点，没有兄弟节点再继续向上一步，依次查找
+		while (node.sibling === null) {
+			const parent = node.return;
+
+			if (
+				parent === null ||
+				// TODO: 为什么parent.tag === HostComponent代表没找到？
+				parent.tag === HostComponent ||
+				parent.tag === HostRoot
+			) {
+				return null;
+			}
+
+			node = parent;
+		}
+
+		if (node.sibling !== null) {
+			node.sibling.return = node.return;
+			node = node.sibling;
+
+			// 向下查找过程
+			while (node.tag !== HostText && node.tag !== HostComponent) {
+				if ((node.flags & Placement) !== NoFlags) {
+					// 说明当前节点要进行Placement, 该节点及其子树不稳定，不适合作为host
+					continue FindSibling;
+				}
+				// 向下继续找
+				if (node.child === null) {
+					continue FindSibling;
+				} else {
+					node.child.return = node;
+					node = node.child;
+				}
+			}
+
+			if ((node.flags & Placement) === NoFlags) {
+				return node.stateNode;
+			} else {
+				continue FindSibling;
+			}
+		}
+	}
+}
+
+function insertOrAppendPlacementNodeIntoContainer(
 	finishedWork: FiberNode,
-	hostParent: ContainerType
+	hostParent: ContainerType,
+	before?: Instance
 ) {
 	if (finishedWork.tag === HostComponent || finishedWork.tag === HostText) {
-		appendChildToContainer(finishedWork.stateNode, hostParent);
+		if (before) {
+			insertChildToContainer(finishedWork.stateNode, hostParent, before);
+		} else {
+			appendChildToContainer(finishedWork.stateNode, hostParent);
+		}
 		return;
 	}
 	const child = finishedWork.child;
 	if (child !== null) {
-		appendPlacementNodeIntoContainer(child, hostParent);
+		insertOrAppendPlacementNodeIntoContainer(child, hostParent);
 		let sibling = child.sibling;
 		while (sibling !== null) {
-			appendPlacementNodeIntoContainer(sibling, hostParent);
+			insertOrAppendPlacementNodeIntoContainer(sibling, hostParent);
 			sibling = sibling.sibling;
 		}
 	}

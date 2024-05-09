@@ -41,7 +41,7 @@ export function initEvent(container: ContainerType, eventType: string) {
 		return;
 	}
 	if (__DEV__) {
-		console.warn('初始化事件系统', eventType);
+		console.log('初始化事件系统', eventType);
 	}
 	container.addEventListener(eventType, function (event) {
 		dispatchEvent(container, eventType, event);

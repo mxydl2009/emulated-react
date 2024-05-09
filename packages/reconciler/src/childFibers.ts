@@ -8,6 +8,8 @@ import { Props, ReactElementType } from 'shared/ReactTypes';
 import { HostText } from './workTag';
 import { ChildDeletion, Placement } from './fiberFlags';
 
+type ExistingChildrenMap = Map<string, FiberNode>;
+
 /**
  * mount时不需要根据effects，因为mount只是placement；
  * @param shouldTrackEffects
@@ -128,12 +130,134 @@ function childReconciler(shouldTrackEffects: boolean) {
 		return fiber;
 	}
 
+	function updateFromMap(
+		returnFiber: FiberNode,
+		existingChildren: ExistingChildrenMap,
+		element: any,
+		key: string
+	): FiberNode | null {
+		const before = existingChildren.get(key);
+
+		if (typeof element === 'string' || typeof element === 'number') {
+			// HostText
+			if (before) {
+				// 能找到旧节点
+				if (before.tag === HostText) {
+					// 能复用, 要返回fiber节点
+					existingChildren.delete(key);
+					return reuseFiber(before, { content: String(element) });
+				}
+			}
+			// before不存在时，表示新节点的索引超过了老节点的索引，应该创建一个fiber节点作为复用
+			return new FiberNode(HostText, { content: String(element) }, null);
+		}
+		if (typeof element === 'object' && element !== null) {
+			switch (element.$$typeof) {
+				case REACT_ELEMENT_TYPE:
+					if (before) {
+						if (before.type === element.type) {
+							// 能复用
+							existingChildren.delete(key);
+							return reuseFiber(before, element.props);
+						}
+					}
+					// 不能复用，创建一个fiber节点
+					return createFiberFromElement(element);
+
+				default:
+					if (__DEV__) {
+						console.warn('不支持的类型', element.$$typeof);
+						throw new Error('不支持的类型' + element.$$typeof);
+					}
+					break;
+			}
+			if (Array.isArray(element)) {
+				// TODO:element是数组时，暂未实现, 如{[<li>2</li>, <li>3</li>]}
+			}
+		}
+		// 找不到，不能复用，
+		return null;
+	}
+
+	function reconcileChildArray(
+		returnFiber: FiberNode,
+		currentFiber: FiberNode | null,
+		children: any[]
+	) {
+		// 老节点中上一个可复用节点的索引，标记移动的判断标准就是节点之间的相对顺序
+		let lastPlacedIndex = 0;
+
+		// 准备形成fiber链表
+		let firstNewFiber: FiberNode | null = null;
+		let lastNewFiber: FiberNode | null = null;
+		// 存储currentFiber到Map
+		const existingChildren: ExistingChildrenMap = new Map();
+		while (currentFiber !== null) {
+			const key = currentFiber.key
+				? currentFiber.key
+				: String(currentFiber.index);
+			existingChildren.set(key, currentFiber);
+			currentFiber = currentFiber.sibling;
+		}
+		// 遍历children
+		// 用index索引作为key
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i];
+			const key = child.key ? child.key : String(i);
+			// 找到旧节点，就复用旧节点，否则创建新节点，那么就会形成新节点的链表(除了Boolean、null、undefined)
+			const newFiber = updateFromMap(returnFiber, existingChildren, child, key);
+
+			// newFiber为null时，表示element的类型不满足要求(如boolean, null, undefined)
+			if (newFiber === null) {
+				continue;
+			} else {
+				newFiber.index = i;
+				newFiber.return = returnFiber;
+			}
+
+			if (firstNewFiber === null) {
+				firstNewFiber = newFiber;
+				lastNewFiber = newFiber;
+			} else {
+				lastNewFiber.sibling = newFiber;
+				lastNewFiber = newFiber;
+			}
+
+			const current = newFiber.alternate;
+			if (current !== null) {
+				const oldIndex = current.index;
+				if (oldIndex < lastPlacedIndex) {
+					// 本次遍历到的新节点对应的老节点的索引小于上一个节点（其实就是上一次遍历到的新节点对应的老节点）的索引
+					// 说明前后两次遍历的节点相对顺序有变化，则需要标记移动
+					newFiber.flags |= Placement;
+					continue;
+				}
+				// 不需要移动
+				lastPlacedIndex = oldIndex;
+			} else {
+				// mount, 标记插入
+				newFiber.flags |= Placement;
+			}
+		}
+
+		// 删除没有复用的老节点
+		existingChildren.forEach((fiber) => {
+			deleteChild(returnFiber, fiber);
+		});
+
+		return firstNewFiber;
+	}
+
 	return function reconcileChildFibers(
 		returnFiber: FiberNode,
 		currentFiber: FiberNode | null,
 		newChild: ReactElementType | ReactElementType[]
 	) {
-		if (typeof newChild === 'object' && newChild !== null) {
+		if (
+			typeof newChild === 'object' &&
+			newChild !== null &&
+			!Array.isArray(newChild)
+		) {
 			switch ((newChild as ReactElementType).$$typeof) {
 				case REACT_ELEMENT_TYPE:
 					return placeSingleChild(
@@ -150,7 +274,10 @@ function childReconciler(shouldTrackEffects: boolean) {
 					break;
 			}
 		}
-		// TODO: 多节点的情况暂时未加入考虑
+		// 多节点的情况
+		if (Array.isArray(newChild)) {
+			return reconcileChildArray(returnFiber, currentFiber, newChild as any[]);
+		}
 
 		if (typeof newChild === 'string' || typeof newChild === 'number') {
 			return placeSingleChild(

@@ -100,15 +100,17 @@ DOM对象的自定义属性上，所以需要一个方法将组件props上的事
 
 ## diff算法
 
+复用的意义：节点可复用，主要是指DOM节点的复用性
+
+- 通过提供一个key，用来标识更新前后是否有变化，没有变化则表示没有对该节点进行删除操作，那么该节点在更新前后一直存在，是可复用的。再使用type来判断元素前后是否一致（实际上，key相同一般就代表了可复用了）
+
+虚拟DOM在映射真实DOM时，只要判断key，就可以获知是否可复用该DOM节点，省去了删除DOM节点、创建DOM节点并插入到文档的性能。因此，**可复用节点的属性变化不在是否可复用的讨论范围内**
+
 ### 单一节点diff
 
 单一节点指的是更新后是一个节点
 
-#### 单对单
-
-这种情况很好处理
-
-#### 多对单
+#### 单对单 多对单
 
 多对单的情况兼顾mount和update，都是只创建一个节点然后mount，只是update流程需要进行删除节点操作
 
@@ -117,7 +119,94 @@ DOM对象的自定义属性上，所以需要一个方法将组件props上的事
 2. 没有可复用的节点: 标记所有节点删除, 创建新节点
    - 2.1 key相同, type不同:
    - 2.2 key不同, type相同:
-   - 2.3 key不同, type不同
+   - 2.3 key不同, type不同;
+
+### 多节点diff
+
+只要是包含插值表达式，就会被处理为Array
+如
+
+```jsx
+<div>hello {name}</div>
+```
+
+会被babel转为
+
+```js
+_jsx('div', {
+	children: ['hello ', name]
+});
+```
+
+再如
+
+```jsx
+function App() {
+	const [arr, setArr] = useState(arrInit);
+	const [num, setNum] = useState(0);
+	return (
+		<div
+			onClick={() => {
+				setNum((num) => num + 1);
+			}}
+		>
+			<ul>
+				{arr.map((item) => (
+					<li key={item.id}>{item.name}</li>
+				))}
+				{num % 2 === 1 && <p>{num}</p>}
+			</ul>
+		</div>
+	);
+}
+```
+
+会被转为
+
+```js
+function App() {
+	const [arr, setArr] = useState(arrInit);
+	const [num, setNum] = useState(0);
+	return /*#__PURE__*/ _jsx('div', {
+		onClick: () => {
+			setNum((num) => num + 1);
+		},
+		children: /*#__PURE__*/ _jsxs('ul', {
+			children: [
+				arr.map((item) =>
+					/*#__PURE__*/ _jsx(
+						'li',
+						{
+							children: item.name
+						},
+						item.id
+					)
+				),
+				num % 2 === 1 &&
+					/*#__PURE__*/ _jsx('p', {
+						children: num
+					})
+			]
+		})
+	});
+}
+```
+
+多节点指的是更新后是多个节点
+
+#### 单对多 多对多
+
+查找是否有可复用节点，除了可复用节点外，老节点都是要删除的节点，新节点都是要创建的节点
+复用，就代表着要进行移动操作
+不能复用，就代表这要进行创建和插入操作
+
+1. 创建一个Map结构，将老节点存储起来（`Map<key: FiberNode.key | index, value: FiberNode>`），以便于
+   查找是否有可复用节点；使用index作为key虽然不够准确，但配合type也可以省去创建DOM元素的性能。
+2. 遍历新的element数组，根据key来查找是否有可复用节点，如果可复用，则复用，并将其从Map结构中删除；
+3. 标记副作用：
+   - 判断可复用节点是否需要标记移动；
+   - 新创建的节点标记插入；
+4. Map中剩下的就是应该删除的节点；
 
 ## 调试方法
 
@@ -162,3 +251,7 @@ test-utils.ts文件是我们自己的测试工具，对外暴露一个renderInto
 
 `@rollup/plugin-replace`: 在打包构建过程中替换目标字符串
 `@rollup/plugin-alias`： 打包构建时，将导入路径的包的别名替换为真实的包路径
+
+```
+
+```

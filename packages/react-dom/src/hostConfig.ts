@@ -56,3 +56,11 @@ function commitTextUpdate(textInstance: Text, content: string | number) {
 export function removeChild(child: Element | Text, container: Element) {
 	container.removeChild(child);
 }
+
+export function insertChildToContainer(
+	child: Instance,
+	container: Instance | ContainerType,
+	before: Instance
+) {
+	container.insertBefore(child, before);
+}
