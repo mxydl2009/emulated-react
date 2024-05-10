@@ -189,7 +189,7 @@ function insertOrAppendPlacementNodeIntoContainer(
 }
 
 /**
- * Fragment情形下，要收集所有的host根节点
+ * Fragment情形下，删除Fragment节点，要收集所有的host根节点
  * 先找到第一个host根节点
  * 每收集到一个host根节点，看看是否为上一步host根节点的兄弟节点，如果是就收集到数组
  * @param hostChildrenToDelete
@@ -217,10 +217,6 @@ function recordHostChildrenToDelete(
  * 1. 对于FC组件，要处理useEffect的清除副作用函数
  * 2. 对于hostComponent，要解绑ref
  * 3. 对于子树需要找到根hostComponent, 移除DOM
- *
- * Fragment情形下，要收集所有的host根节点
- * 先找到第一个host根节点
- * 每收集到一个host根节点，看看是否为上一步host根节点的兄弟节点，如果是就收集到数组
  * @param childToDelete
  */
 function commitDeletion(childToDelete: FiberNode) {

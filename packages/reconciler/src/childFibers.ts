@@ -167,7 +167,7 @@ function childReconciler(shouldTrackEffects: boolean) {
 		element: any,
 		key: string
 	): FiberNode | null {
-		const before = existingChildren.get(key);
+		const before = existingChildren.get(key) || null;
 
 		if (typeof element === 'string' || typeof element === 'number') {
 			// HostText
@@ -182,7 +182,11 @@ function childReconciler(shouldTrackEffects: boolean) {
 			// before不存在时，表示新节点的索引超过了老节点的索引，应该创建一个fiber节点作为复用
 			return new FiberNode(HostText, { content: String(element) }, null);
 		}
-		if (typeof element === 'object' && element !== null) {
+		if (
+			typeof element === 'object' &&
+			element !== null &&
+			!Array.isArray(element)
+		) {
 			switch (element.$$typeof) {
 				case REACT_ELEMENT_TYPE:
 					if (element.type === REACT_FRAGMENT_TYPE) {
