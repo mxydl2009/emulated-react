@@ -98,8 +98,14 @@ function prepareFreshStack(root: FiberRootNode, lane: Lane) {
  * @param root FiberRoot节点
  */
 function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
-	console.log(lane);
+	console.log('performSyncWorkOnRoot', lane);
+	// 第二次执行时，由于上一次的Lane已经被移除，再次获取时就不会是上一个Lane
+	const nextLane = getHighestPriorityLane(root.pendingLanes);
 
+	if (nextLane !== SyncLane) {
+		ensureRootIsScheduled(root);
+		return;
+	}
 	// 初始化
 	prepareFreshStack(root, lane);
 

@@ -89,7 +89,7 @@ export const processUpdateQueue = <State>(
 		const updateLane = pending.lane;
 		if (updateLane === renderLane) {
 			// 如果第一个更新的lane与当前渲染的lane一致，那就计算该更新
-			const { action } = pendingUpdate;
+			const { action } = pending;
 			if (action instanceof Function) {
 				// result.memoizedState = action(baseState);
 				baseState = action(baseState);
@@ -103,6 +103,18 @@ export const processUpdateQueue = <State>(
 		}
 		pending = pending.next;
 	} while (pending !== first);
+	pending = null;
+	// let current = pendingUpdate;
+	// do {
+	// 	// 移除已消费的lane对应的update
+	// 	if (current.next.lane === renderLane) {
+	// 		// 移除pending对应的update
+	// 		current.next = current.next.next;
+	// 	} else {
+	// 		current = current.next;
+	// 	}
+	// } while (current.next !== first);
+	// current = null;
 	// 最后计算得到的state返回
 	result.memoizedState = baseState;
 	return result;

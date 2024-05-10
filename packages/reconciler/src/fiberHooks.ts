@@ -101,6 +101,10 @@ function updateState<State>(
 	// 计算新的state
 	const queue = hook.updateQueue as UpdateQueue<State>;
 	const pending = queue.shared.pending;
+	// TODO: 消费pending后，reset，事实上，pending中可能有不同优先级的更新，不能直接reset为null
+	// 这里只处理了SyncLane这种简单的情形（或者说pending中的更新都是一个优先级）
+	queue.shared.pending = null;
+
 	if (pending !== null) {
 		const { memoizedState } = processUpdateQueue(
 			hook.memoizedState,
