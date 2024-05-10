@@ -17,6 +17,9 @@ import { HostRoot } from './workTag';
 // 存储工作的fiber
 let workInProgress: FiberNode | null = null;
 
+// 本次更新的Lane
+let wipRootRenderLane: Lane = NoLane;
+
 /**
  * 由产生更新的fiber找到hostRootFiber，因为每次更新渲染都从顶层的fiber开始构建fiber树
  * @param fiber 当前需要调用更新的fiber，或者说是产生更新的fiber
@@ -81,7 +84,8 @@ export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
  * 初始化开始构建的节点
  * @param root FiberRoot
  */
-function prepareFreshStack(root: FiberRootNode) {
+function prepareFreshStack(root: FiberRootNode, lane: Lane) {
+	wipRootRenderLane = lane;
 	// createWorkInProgress方法根据初始的rootFiber创建workInProgress的rootFiber，当新的rootFiber
 	// 创建完成后，root.current将指向新的rootFiber，原来的rootFiber会被垃圾回收
 	workInProgress = createWorkInProgress(root.current, {});
@@ -96,7 +100,7 @@ function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
 	console.log(lane);
 
 	// 初始化
-	prepareFreshStack(root);
+	prepareFreshStack(root, lane);
 
 	do {
 		try {
@@ -112,6 +116,10 @@ function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
 
 	const finishedWork = root.current.alternate;
 	root.finishedWork = finishedWork;
+	// 本次更新要消费的lane存储
+	root.finishedLane = lane;
+
+	wipRootRenderLane = NoLane;
 
 	// 根据新的workInProgress树和副作用，执行DOM操作
 	commitRoot(root);
@@ -157,7 +165,7 @@ function workLoop() {
 }
 
 function performUnitOfWork(fiber: FiberNode | null) {
-	const next: FiberNode | null = beginWork(fiber);
+	const next: FiberNode | null = beginWork(fiber, wipRootRenderLane);
 	// 当前fiber执行完毕，将pendingProps缓存到memoizedProps;
 	fiber.memoizedProps = fiber.pendingProps;
 	if (next === null) {

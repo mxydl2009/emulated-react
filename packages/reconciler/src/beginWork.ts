@@ -10,20 +10,23 @@ import {
 } from './workTag';
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
+import { Lane } from './fiberLanes';
 
 /**
  * 构造fiberNode的children，返回子FiberNode
  * @wip 即传入的wip fiber
  * @return 返回第一个子节点
  */
-export const beginWork = (wip: FiberNode) => {
+export const beginWork = (wip: FiberNode, renderLane: Lane) => {
 	switch (wip.tag) {
 		case HostRoot:
-			return updateHostRoot(wip);
+			// renderLane要传给可以触发更新的组件
+			return updateHostRoot(wip, renderLane);
 		case HostComponent:
 			return updateHostComponent(wip);
 		case FunctionComponent:
-			return updateFunctionComponent(wip);
+			// renderLane要传给可以触发更新的组件
+			return updateFunctionComponent(wip, renderLane);
 		case Fragment:
 			return updateFragment(wip);
 		case HostText:
@@ -37,19 +40,19 @@ export const beginWork = (wip: FiberNode) => {
 	return null;
 };
 
-function updateFunctionComponent(wip: FiberNode) {
-	const nextChildren = renderWithHooks(wip);
+function updateFunctionComponent(wip: FiberNode, renderLane: Lane) {
+	const nextChildren = renderWithHooks(wip, renderLane);
 	reconcileChildren(wip, nextChildren);
 	return wip.child;
 }
 // TODO:对于HostRoot，要根据baseState和updateQueue计算出新的state，再reconcile children
 // ???为什么hostRoot要计算状态？
-function updateHostRoot(wip: FiberNode) {
+function updateHostRoot(wip: FiberNode, renderLane: Lane) {
 	const baseState = wip.memoizedState;
 	const updateQueue = wip.updateQueue as UpdateQueue<ReactElementType | null>;
 	const pending = updateQueue.shared.pending;
 	updateQueue.shared.pending = null;
-	const { memoizedState } = processUpdateQueue(baseState, pending);
+	const { memoizedState } = processUpdateQueue(baseState, pending, renderLane);
 	wip.memoizedState = memoizedState;
 	const nextChildren = wip.memoizedState;
 

@@ -70,7 +70,8 @@ export const enqueueUpdate = <State>(
  */
 export const processUpdateQueue = <State>(
 	baseState: State,
-	pendingUpdate: Update<State> | null
+	pendingUpdate: Update<State> | null,
+	renderLane: Lane
 ): { memoizedState: State } => {
 	if (pendingUpdate === null) {
 		return {
@@ -80,11 +81,29 @@ export const processUpdateQueue = <State>(
 	const result = {
 		memoizedState: baseState
 	};
-	const { action } = pendingUpdate;
-	if (action instanceof Function) {
-		result.memoizedState = action(baseState);
-	} else {
-		result.memoizedState = action;
-	}
+	const first = pendingUpdate.next;
+	let pending = pendingUpdate.next;
+	// 遍历更新链表，将与renderLane一致优先级的更新逐次计算出新的state
+	do {
+		// 获取第一个更新对应的lane
+		const updateLane = pending.lane;
+		if (updateLane === renderLane) {
+			// 如果第一个更新的lane与当前渲染的lane一致，那就计算该更新
+			const { action } = pendingUpdate;
+			if (action instanceof Function) {
+				// result.memoizedState = action(baseState);
+				baseState = action(baseState);
+			} else {
+				baseState = action;
+			}
+		} else {
+			if (__DEV__) {
+				console.error('暂时不该进入该分支');
+			}
+		}
+		pending = pending.next;
+	} while (pending !== first);
+	// 最后计算得到的state返回
+	result.memoizedState = baseState;
 	return result;
 };
