@@ -1,3 +1,5 @@
+import { FiberRootNode } from './fiberNode';
+
 export type Lane = number;
 // Lanes是Lane的集合，代表了更新任务属于同一批次的Lane
 export type Lanes = number;
@@ -22,4 +24,13 @@ export function requestUpdateLane() {
  */
 export function getHighestPriorityLane(lanes: Lanes): Lane {
 	return lanes & -lanes;
+}
+
+/**
+ * 从pendingLanes中移除lane
+ * @param root
+ * @param lane
+ */
+export function markRootFinished(root: FiberRootNode, lane: Lane) {
+	root.pendingLanes &= ~lane;
 }
