@@ -199,7 +199,7 @@ function recordHostChildrenToDelete(
 	hostChildrenToDelete: FiberNode[],
 	unmountFiber: FiberNode
 ) {
-	let last = hostChildrenToDelete[hostChildrenToDelete.length - 1];
+	const last = hostChildrenToDelete[hostChildrenToDelete.length - 1];
 	if (!last) {
 		hostChildrenToDelete.push(unmountFiber);
 	} else {
@@ -226,7 +226,7 @@ function recordHostChildrenToDelete(
 function commitDeletion(childToDelete: FiberNode) {
 	// let rootHostNode = null;
 	// 要删除的根host节点，Fragment情形下可能会有多个
-	let hostChildrenToDelete = [];
+	const hostChildrenToDelete = [];
 
 	commitNestedComponent(childToDelete, (unmountFiber) => {
 		switch (unmountFiber.tag) {
