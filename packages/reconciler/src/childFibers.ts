@@ -143,7 +143,7 @@ function childReconciler(shouldTrackEffects: boolean) {
 	function updateFragment(
 		returnFiber: FiberNode,
 		currentFiber: FiberNode | null,
-		element: ReactElementType,
+		element: any,
 		key: Key,
 		existingChildren: ExistingChildrenMap
 	) {
@@ -216,7 +216,20 @@ function childReconciler(shouldTrackEffects: boolean) {
 				// TODO:element是数组时，暂未实现, 如{[<li>2</li>, <li>3</li>]}
 			}
 		}
-
+		// 如果当前元素是一个数组，将数组元素统一安排在一个Fragment中来处理
+		if (Array.isArray(element)) {
+			return updateFragment(
+				returnFiber,
+				before,
+				{
+					props: {
+						children: element
+					}
+				},
+				key,
+				existingChildren
+			);
+		}
 		// 找不到，不能复用，
 		return null;
 	}
