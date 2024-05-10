@@ -64,3 +64,13 @@ export function insertChildToContainer(
 ) {
 	container.insertBefore(child, before);
 }
+
+export const scheduleMicroTask = (function () {
+	if (typeof queueMicrotask === 'function') {
+		return queueMicrotask;
+	}
+	if (typeof Promise === 'function') {
+		return (cb) => Promise.resolve(null).then(cb);
+	}
+	return setTimeout;
+})();

@@ -1,8 +1,17 @@
+import { scheduleMicroTask } from 'hostConfig';
 import { beginWork } from './beginWork';
 import { commitMutationEffects } from './commitWork';
 import { completeWork } from './completeWork';
 import { MutationMask, NoFlags } from './fiberFlags';
+import {
+	Lane,
+	NoLane,
+	SyncLane,
+	getHighestPriorityLane,
+	mergeLanes
+} from './fiberLanes';
 import { FiberNode, FiberRootNode, createWorkInProgress } from './fiberNode';
+import { flushSyncCallbacks, scheduleSyncCallback } from './syncTaskQueue';
 import { HostRoot } from './workTag';
 
 // 存储工作的fiber
@@ -12,7 +21,7 @@ let workInProgress: FiberNode | null = null;
  * 由产生更新的fiber找到hostRootFiber，因为每次更新渲染都从顶层的fiber开始构建fiber树
  * @param fiber 当前需要调用更新的fiber，或者说是产生更新的fiber
  */
-function markUpdateFromFiberToRoot(fiber: FiberNode) {
+function markUpdateFromFiberToRoot(fiber: FiberNode): FiberRootNode | null {
 	let node = fiber;
 	let parent = node.return;
 	while (parent !== null) {
@@ -26,12 +35,45 @@ function markUpdateFromFiberToRoot(fiber: FiberNode) {
 }
 
 /**
+ * 记录本次要消费的Lane到FiberRootNode上
+ * @param root FiberRootNode
+ * @param lane
+ */
+function markRootUpdated(root: FiberRootNode, lane: Lane) {
+	root.pendingLanes = mergeLanes(root.pendingLanes, lane);
+}
+
+function ensureRootIsScheduled(root: FiberRootNode) {
+	const updateLane = getHighestPriorityLane(root.pendingLanes);
+	if (updateLane === NoLane) {
+		return;
+	}
+	if (updateLane === SyncLane) {
+		// 同步优先级，微任务调度，意味着在浏览器重绘之前要执行完
+		if (__DEV__) {
+			console.log('微任务中调度优先级', updateLane);
+		}
+		// 将同步更新入口函数作为调度的回调函数入队
+		// 多次触发更新，则scheduleSyncCallback会调度多次更新任务，都会放在syncQueue中由微任务一次性执行
+		scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root, updateLane));
+		// 将调度的任务在微任务中同步执行，尽管可能有多个更新回调任务，但因为有isFlushingSync的标志位，只会一次性执行完成
+		scheduleMicroTask(flushSyncCallbacks);
+	} else {
+		// 其他优先级，宏任务调度
+	}
+}
+/**
  * 将产生的更新进行调度，开启新的渲染
  * @param fiber 当前需要调用更新的fiber，或者说是产生更新的fiber
+ * @param lane 当前要消费的lane
  */
-export function scheduleUpdateOnFiber(fiber: FiberNode) {
+export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
 	const root = markUpdateFromFiberToRoot(fiber);
-	renderRoot(root);
+	// 记录lane到FiberRootNode上
+	markRootUpdated(root, lane);
+	// 开始render阶段
+	// renderRoot(root);
+	ensureRootIsScheduled(root);
 	// 通过requestIdleCallback执行更新
 	// requestIdleCallback(renderRoot);
 }
@@ -45,11 +87,14 @@ function prepareFreshStack(root: FiberRootNode) {
 	workInProgress = createWorkInProgress(root.current, {});
 }
 /**
- * renderRoot方法由触发更新的方法调用，不管是mount还是update，都统一抽象为update流程
+ * 同步更新的入口方法
+ * performSyncWorkOnRoot方法由触发更新的方法调用，不管是mount还是update，都统一抽象为update流程
  * 只是根据mount还是update而有差别
  * @param root FiberRoot节点
  */
-function renderRoot(root: FiberRootNode) {
+function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
+	console.log(lane);
+
 	// 初始化
 	prepareFreshStack(root);
 

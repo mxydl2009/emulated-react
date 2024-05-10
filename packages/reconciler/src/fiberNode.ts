@@ -2,6 +2,7 @@ import { FunctionComponent, WorkTag, HostComponent, Fragment } from './workTag';
 import { Props, Key, Ref, ReactElementType } from 'shared/ReactTypes';
 import { Flags, NoFlags } from './fiberFlags';
 import { ContainerType } from 'hostConfig';
+import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
 // import { UpdateQueue } from './updateQueue';
 
 // FiberNode既作为数据存储的单元，也作为工作单元
@@ -75,12 +76,18 @@ export class FiberRootNode {
 	current: FiberNode;
 	// 更新完成后的fiber根节点，与current都是服务于双缓存技术
 	finishedWork: FiberNode | null;
+	// 所有未被消费的Lane集合
+	pendingLanes: Lanes;
+	// 本次更新要消费的Lane
+	finishedLane: Lane;
 
 	constructor(container: ContainerType, hostRootFiber: FiberNode) {
 		this.container = container;
 		this.current = hostRootFiber;
 		this.finishedWork = null;
 		hostRootFiber.stateNode = this;
+		this.pendingLanes = NoLanes;
+		this.finishedLane = NoLane;
 	}
 }
 

@@ -10,6 +10,7 @@ import {
 } from './updateQueue';
 import { Action } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
+import { requestUpdateLane } from './fiberLanes';
 
 // 记录当前正在渲染的fiber节点，用于在Hook执行中保存Hook的数据，在渲染完成后，需要重置为null，从而
 // 继续记录下一个fiber节点的Hook数据
@@ -115,10 +116,12 @@ function dispatchSetState<State>(
 	action: Action<State>
 ): void {
 	// 接入更新流程，与updateContainer类似
-	const update = createUpdate<Action<State>>(action);
+	// 获取此次更新的优先级, requestUpdateLane可以获取触发更新的上下文，根据不同上下文返回不同的优先级
+	const lane = requestUpdateLane();
+	const update = createUpdate<Action<State>>(action, lane);
 	enqueueUpdate(updateQueue, update);
 	// 从当前触发更新的fiber节点开始调度更新，逐层向上找到根节点，开始渲染fiber树进入更新流程
-	scheduleUpdateOnFiber(fiber);
+	scheduleUpdateOnFiber(fiber, lane);
 }
 
 function mountWorkInProgressHook(): Hook {
