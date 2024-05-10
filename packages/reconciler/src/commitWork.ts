@@ -189,14 +189,44 @@ function insertOrAppendPlacementNodeIntoContainer(
 }
 
 /**
+ * Fragment情形下，要收集所有的host根节点
+ * 先找到第一个host根节点
+ * 每收集到一个host根节点，看看是否为上一步host根节点的兄弟节点，如果是就收集到数组
+ * @param hostChildrenToDelete
+ * @param unmountFiber
+ */
+function recordHostChildrenToDelete(
+	hostChildrenToDelete: FiberNode[],
+	unmountFiber: FiberNode
+) {
+	let last = hostChildrenToDelete[hostChildrenToDelete.length - 1];
+	if (!last) {
+		hostChildrenToDelete.push(unmountFiber);
+	} else {
+		let node = last.sibling;
+		while (node !== null) {
+			if (unmountFiber === node) {
+				hostChildrenToDelete.push(unmountFiber);
+			}
+			node = node.sibling;
+		}
+	}
+}
+/**
  * 删除子节点, 即要删除子树，子树内的节点都需要进行不同的处理，所以需要向下遍历子树，与beginWork的流程一致
  * 1. 对于FC组件，要处理useEffect的清除副作用函数
  * 2. 对于hostComponent，要解绑ref
  * 3. 对于子树需要找到根hostComponent, 移除DOM
+ *
+ * Fragment情形下，要收集所有的host根节点
+ * 先找到第一个host根节点
+ * 每收集到一个host根节点，看看是否为上一步host根节点的兄弟节点，如果是就收集到数组
  * @param childToDelete
  */
 function commitDeletion(childToDelete: FiberNode) {
-	let rootHostNode = null;
+	// let rootHostNode = null;
+	// 要删除的根host节点，Fragment情形下可能会有多个
+	let hostChildrenToDelete = [];
 
 	commitNestedComponent(childToDelete, (unmountFiber) => {
 		switch (unmountFiber.tag) {
@@ -204,15 +234,15 @@ function commitDeletion(childToDelete: FiberNode) {
 				// 1. 对于hostComponent，要解绑ref
 				// commitDeletionHostComponent(unmountFiber);
 				// 2. 赋值rootHostComponent
-				if (rootHostNode === null) {
-					rootHostNode = unmountFiber;
+				if (hostChildrenToDelete.length === 0) {
+					recordHostChildrenToDelete(hostChildrenToDelete, unmountFiber);
 				}
 
 				break;
 			case HostText:
-				// 因此组件的根节点一定是一个，而不是有多个
-				if (rootHostNode === null) {
-					rootHostNode = unmountFiber;
+				// 因此组件的根节点一定是一个，而不是有多个(但是Fragment可能有多个)
+				if (hostChildrenToDelete.length === 0) {
+					recordHostChildrenToDelete(hostChildrenToDelete, unmountFiber);
 				}
 				break;
 			case FunctionComponent:
@@ -226,11 +256,14 @@ function commitDeletion(childToDelete: FiberNode) {
 		}
 	});
 
-	if (rootHostNode !== null) {
+	if (hostChildrenToDelete.length !== 0) {
 		// 3. 对于子树需要找到根hostComponent, 移除DOM
 		const hostParent = getHostParent(childToDelete);
 		if (hostParent !== null) {
-			removeChild(rootHostNode.stateNode, hostParent);
+			// removeChild(rootHostNode.stateNode, hostParent);
+			hostChildrenToDelete.forEach((node) =>
+				removeChild(node.stateNode, hostParent)
+			);
 		}
 	}
 	// 脱离fiber树 TODO: 兄弟节点关系需不需要重置？这里重置fiber的意义是什么

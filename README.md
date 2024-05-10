@@ -208,6 +208,114 @@ function App() {
    - 新创建的节点标记插入；
 4. Map中剩下的就是应该删除的节点；
 
+## Fragment
+
+### unKeyedTopLevelFragment
+
+指的是组件根节点是Fragment类型，如
+
+```jsx
+// App组件
+function App() {
+	return (
+		<>
+			<div>hello</div>
+			<div>world</div>
+		</>
+	);
+}
+```
+
+### 非顶层Fragment
+
+Fragment不是根节点，而是子节点，如
+
+```jsx
+// App组件
+function App() {
+	return (
+		<div>
+			<>
+				<p>app</p>
+			</>
+			<div>hello</div>
+			<div>world</div>
+		</div>
+	);
+}
+```
+
+### 插值数组也作为Fragment处理
+
+如下
+
+```jsx
+arr = [<li>1</li>, <li>2</li>]
+
+<ul>
+	<li>11</li>
+	<li>122</li>
+	{arr}
+</ul>
+```
+
+编译结果
+
+```js
+const arr = [
+	/*#__PURE__*/ _jsx('li', {
+		children: '1'
+	}),
+	/*#__PURE__*/ _jsx('li', {
+		children: '2'
+	})
+];
+return /*#__PURE__*/ _jsxs('ul', {
+	children: [
+		/*#__PURE__*/ _jsx('li', {
+			children: '11'
+		}),
+		/*#__PURE__*/ _jsx('li', {
+			children: '122'
+		}),
+		arr
+	]
+});
+```
+
+需要将插值表达式的arr也作为Fragment节点处理, 因为children中出现了嵌套数组的情况，嵌套数组时，内层
+数组添加一个无意义的Fragment作为根节点
+
+### React对外暴露Fragment
+
+Fragment需要作为组件的一种类型对外暴露。
+jsx对Fragment编译结果为
+
+```js
+_jsx(Fragment, {
+	children: /*#__PURE__*/ _jsx('p', {
+		children: 'para'
+	})
+});
+```
+
+React需要对外暴露Fragment，才不会导致Fragment变量找不到的错误。而Fragment只是作为类似于函数名、HTML标签名等等这样的ReactElement的一个标识；
+
+```js
+export const Fragment = REACT_FRAGMENT_TYPE;
+```
+
+### 删除Fragment节点
+
+在DOM删除操作的情形，面对删除Fragment节点，可能会存在多个根host节点，比如下面的jsx，div和p都是根host节点，所以要找到所有根host节点，然后删除
+
+```jsx
+<>
+	<div>ddd</div>
+	<p>ppp</p>
+</>
+```
+
 ## 调试方法
 
 ### 打包构建为production产物，在真实环境下调试
