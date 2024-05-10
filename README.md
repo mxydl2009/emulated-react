@@ -355,7 +355,7 @@ test-utils.ts文件是我们自己的测试工具，对外暴露一个renderInto
 
 在react的包下添加`__tests__`，添加ReactElement-test.js的测试用例文件
 
-##### rollup相关
+## rollup相关
 
 `@rollup/plugin-replace`: 在打包构建过程中替换目标字符串
 `@rollup/plugin-alias`： 打包构建时，将导入路径的包的别名替换为真实的包路径
@@ -363,3 +363,69 @@ test-utils.ts文件是我们自己的测试工具，对外暴露一个renderInto
 ```
 
 ```
+
+## 调度系统
+
+### 更新是同步还是异步
+
+这个问题的核心在于，更新UI的JavaScript代码相对于触发更新之后的代码是同步执行还是异步执行？例如
+
+```js
+// 代码是在某个用户交互的回调中执行
+setState((num) => num + 1);
+console.log('同步还是异步');
+```
+
+- 如果是同步执行，那么在执行setState的过程中，更新UI的代码会被压栈执行，执行完更新后，再执行打印语句；
+- 如果是异步执行，那么在执行setState的过程中，并不会执行更新UI的代码，而是将更新UI的代码调度到异步队列中，然后执行打印语句，最后在调度系统安排的合适时机执行更新UI的代码；
+
+### 异步更新的时机
+
+不同的框架对于异步更新的时机可能会不同，大部分框架都会选择将更新调度在本次宏任务的微任务队列中执行。微任务是一个执行UI更新的适当时机。
+但是微任务有个缺点，就是微任务是在浏览器启动渲染线程重绘界面之前执行，如果微任务性能开销大，就会造成阻塞页面。
+react的调度系统，优先使用messageChannel API来调度任务。messageChannel调度的任务是宏任务，在渲染线程重绘界面之后立刻执行，不耽误帧时间。而setTimeout(fn, 0)最小延迟时间是4ms，会浪费4ms的帧时间。
+
+### 批处理与优先级
+
+批处理是将一次宏任务里的多次更新合并为一次更新流程来处理。
+多次更新会创建多个更新任务，将这些更新任务存储起来（React内部使用环形链表），在一次更新流程中统一处理。只是在处理过程中，React可以按照优先级对这些更新任务排序，优先处理高优先级的任务，多个更新任务先处理优先级一致的一批任务。
+
+```typescript
+// 环状链表的形成
+/**
+ * 入队, pending指向最后入队的update元素，要形成一个环状链表
+ * @param updateQueue 队列
+ * @param update 更新
+ */
+export const enqueueUpdate = <State>(
+	updateQueue: UpdateQueue<State>,
+	update: Update<State>
+) => {
+	const pending = updateQueue.shared.pending;
+	if (pending === null) {
+		update.next = update;
+	} else {
+		// pending.next指向的是第一个元素，而update需要插入到最后，所以这里将第一个元素赋值到update.next,
+		// 这样update在入队后，update.next就会指向第一个元素, 这样保存了pending.next不至于丢掉;
+		update.next = pending.next;
+		// 保存了pending.next后，pending此时作为倒数第二个，需要用next指向update
+		pending.next = update;
+	}
+	// 将update插入到最后
+	updateQueue.shared.pending = update;
+};
+```
+
+#### 优先级Lane模型
+
+使用Lane模型来记录更新的优先级。
+Lane模型
+
+- 使用二进制记录优先级；
+- 用集合的形式来表示批次；
+  **优先级的产生**：
+  优先级的产生与触发更新的上下文有关，不同的上下文产出的优先级不同，例如用户交互的上下文优先级较高，挂载应用时的优先级最高（同步），使用setTransition产出的优先级较低等等
+  **优先级的消费**：
+  触发更新后，由scheduler将优先级记录在FiberRootNode上，在所有优先级中选出一批优先级，消费（render，commit），然后将已消费的优先级从FiberRootNode里删除，再继续选出优先级消费，直到没有更新任务。
+  - 在render阶段消费lane，即将lane在构造fiber树时传递下去，在fiber节点计算更新时会用到
+  - 在commit阶段，移除已经消费的lane
