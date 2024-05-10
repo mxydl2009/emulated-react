@@ -8,7 +8,7 @@ export type ContainerType = Element;
 export type Instance = Element;
 
 export function createInstance(type: Type, props: Props): any {
-	const element = document.createElement(type) as unknown;
+	const element = document.createElement(type as string) as unknown;
 	updateFiberPropsToInstance(element as DOMElement, props);
 	return element;
 }
