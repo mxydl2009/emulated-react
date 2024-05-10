@@ -5,7 +5,8 @@ import {
 	FunctionComponent,
 	HostComponent,
 	HostRoot,
-	HostText
+	HostText,
+	Fragment
 } from './workTag';
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
@@ -23,6 +24,8 @@ export const beginWork = (wip: FiberNode) => {
 			return updateHostComponent(wip);
 		case FunctionComponent:
 			return updateFunctionComponent(wip);
+		case Fragment:
+			return updateFragment(wip);
 		case HostText:
 			return null;
 		default:
@@ -84,5 +87,11 @@ function reconcileChildren(
 		// mount
 		wip.child = mountChildFibers(wip, null, children);
 	}
+	return wip.child;
+}
+
+function updateFragment(wip: FiberNode) {
+	const nextChildren = wip.pendingProps.children;
+	reconcileChildren(wip, nextChildren);
 	return wip.child;
 }

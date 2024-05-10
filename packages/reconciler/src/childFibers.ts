@@ -5,8 +5,8 @@ import {
 	createFiberFromFragment,
 	createWorkInProgress
 } from './fiberNode';
-import { Props, ReactElementType } from 'shared/ReactTypes';
-import { HostText } from './workTag';
+import { Key, Props, ReactElementType } from 'shared/ReactTypes';
+import { Fragment, HostText } from './workTag';
 import { ChildDeletion, Placement } from './fiberFlags';
 
 type ExistingChildrenMap = Map<string, FiberNode>;
@@ -140,6 +140,27 @@ function childReconciler(shouldTrackEffects: boolean) {
 		return fiber;
 	}
 
+	function updateFragment(
+		returnFiber: FiberNode,
+		currentFiber: FiberNode | null,
+		element: ReactElementType,
+		key: Key,
+		existingChildren: ExistingChildrenMap
+	) {
+		const props = element.props;
+		let fiber;
+		if (currentFiber !== null && currentFiber.tag === Fragment) {
+			// 复用
+			existingChildren.delete(key);
+			fiber = reuseFiber(currentFiber, props);
+		} else {
+			// 创建
+			fiber = createFiberFromFragment(element, key);
+		}
+		fiber.return = returnFiber;
+		return fiber;
+	}
+
 	function updateFromMap(
 		returnFiber: FiberNode,
 		existingChildren: ExistingChildrenMap,
@@ -164,6 +185,16 @@ function childReconciler(shouldTrackEffects: boolean) {
 		if (typeof element === 'object' && element !== null) {
 			switch (element.$$typeof) {
 				case REACT_ELEMENT_TYPE:
+					if (element.type === REACT_FRAGMENT_TYPE) {
+						// Fragment
+						return updateFragment(
+							returnFiber,
+							before,
+							element,
+							key,
+							existingChildren
+						);
+					}
 					if (before) {
 						if (before.type === element.type) {
 							// 能复用
@@ -185,6 +216,7 @@ function childReconciler(shouldTrackEffects: boolean) {
 				// TODO:element是数组时，暂未实现, 如{[<li>2</li>, <li>3</li>]}
 			}
 		}
+
 		// 找不到，不能复用，
 		return null;
 	}
