@@ -77,6 +77,7 @@ Hooks会在react中导入，React提供一个中间层用来存储当前使用�
 hooks集合映射图
 
 问题2： Hook如何记录自身的数据
+
 解答2： hook是一种数据结构，每个Hook数据结构会与use...的函数进行对应（链表结构顺序对应），Hook将自身的数据记录在当前组件(fiber节点的memoizedState)上。
 
 ### mount阶段
@@ -429,3 +430,9 @@ Lane模型
   触发更新后，由scheduler将优先级记录在FiberRootNode上，在所有优先级中选出一批优先级，消费（render，commit），然后将已消费的优先级从FiberRootNode里删除，再继续选出优先级消费，直到没有更新任务。
   - 在render阶段消费lane，即将lane在构造fiber树时传递下去，在fiber节点计算更新时会用到
   - 在commit阶段，移除已经消费的lane
+
+## 常见问题记录
+
+Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？
+
+A: 的确如此，从某个fiber树重建子树，比从root节点重建性能更高。但是忽略了一点，React内部是有更新任务优先级的，从某个fiber节点产生的更新任务，未必会立刻调度更新，因为该更新任务优先级并不一定更高，也许某处有更高优先级任务产生，所以不能从该fiber节点重建，而是必须从root处重建，这样逻辑更加简单。像Vue、svelte没有更新优先级的概念，所以不必从根节点开始diff，直接从发生更新的节点开始diff即可。
