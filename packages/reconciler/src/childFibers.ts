@@ -1,7 +1,8 @@
-import { REACT_ELEMENT_TYPE } from 'shared/ReactSymbols';
+import { REACT_ELEMENT_TYPE, REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
 import {
 	FiberNode,
 	createFiberFromElement,
+	createFiberFromFragment,
 	createWorkInProgress
 } from './fiberNode';
 import { Props, ReactElementType } from 'shared/ReactTypes';
@@ -70,6 +71,10 @@ function childReconciler(shouldTrackEffects: boolean) {
 				// key相同
 				if (element.$$typeof === REACT_ELEMENT_TYPE) {
 					if (currentFiber.type === element.type) {
+						// let props = element.props;
+						// if (element.type === REACT_FRAGMENT_TYPE) {
+						// 	props = element.props.children;
+						// }
 						// type相同 直接复用, 返回节点, 标记剩下的节点要删除
 						const cloneFiber = reuseFiber(currentFiber, element.props);
 						cloneFiber.return = returnFiber;
@@ -94,7 +99,12 @@ function childReconciler(shouldTrackEffects: boolean) {
 				currentFiber = currentFiber.sibling;
 			}
 		}
-		const child = createFiberFromElement(element);
+		let child;
+		if (element.type === REACT_FRAGMENT_TYPE) {
+			child = createFiberFromFragment(element, key);
+		} else {
+			child = createFiberFromElement(element);
+		}
 		child.return = returnFiber;
 		return child;
 	}
@@ -251,8 +261,19 @@ function childReconciler(shouldTrackEffects: boolean) {
 	return function reconcileChildFibers(
 		returnFiber: FiberNode,
 		currentFiber: FiberNode | null,
-		newChild: ReactElementType | ReactElementType[]
+		newChild: any
 	) {
+		// 对于单节点的情况，判断newChild是不是顶层未添加key的Fragment节点
+		// 如果是，直接将fragment的children赋值给newChild, 转化为多节点的逻辑,因为单节点Fragment没什么意义
+		// 如果不是，那么就会进入多节点的逻辑，在updateFromMap中进行处理
+		const isUnKeyedTopLevelFragment =
+			typeof newChild === 'object' &&
+			newChild !== null &&
+			newChild.type === REACT_FRAGMENT_TYPE &&
+			newChild.key === null;
+		if (isUnKeyedTopLevelFragment) {
+			newChild = newChild.props.children;
+		}
 		if (
 			typeof newChild === 'object' &&
 			newChild !== null &&
