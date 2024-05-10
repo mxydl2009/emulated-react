@@ -1,16 +1,22 @@
 import { Dispatch } from 'react/src/currentDispatcher';
 import { Action } from 'shared/ReactTypes';
+import { Lane } from './fiberLanes';
 /*
  * 表示更新的数据结构，action代表更新的payload，payload可以是partialState，也可以是返回partialState的函数
  */
 export interface Update<State> {
 	action: Action<State>;
 	next: Update<State>;
+	lane: Lane;
 }
 
-export const createUpdate = <State>(action: Action<State>): Update<State> => {
+export const createUpdate = <State>(
+	action: Action<State>,
+	lane: Lane
+): Update<State> => {
 	return {
 		action,
+		lane,
 		next: null
 	};
 };
