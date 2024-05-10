@@ -4,3 +4,7 @@ export const REACT_ELEMENT_TYPE = supportSymbol
 	? Symbol.for('react.element')
 	: // 用0xeac7的number类型，纯属于eac7长得像react
 		0xeac7;
+
+export const REACT_FRAGMENT_TYPE = supportSymbol
+	? Symbol.for('react.fragment')
+	: 0xeacb;
