@@ -8,6 +8,7 @@ import {
 	NoLane,
 	SyncLane,
 	getHighestPriorityLane,
+	markRootFinished,
 	mergeLanes
 } from './fiberLanes';
 import { FiberNode, FiberRootNode, createWorkInProgress } from './fiberNode';
@@ -138,8 +139,18 @@ function commitRoot(root: FiberRootNode) {
 	if (__DEV__) {
 		console.log('commitRoot', finishedWork);
 	}
+	const lane = root.finishedLane;
+
+	if (lane === NoLane && __DEV__) {
+		console.error('不应该是NoLane');
+	}
 	// 获取到finishedWork后重置
 	root.finishedWork = null;
+
+	root.finishedLane = NoLane;
+
+	// 移除已消费的lane
+	markRootFinished(root, lane);
 	// 判断三个子阶段是否需要各自的操作
 
 	const subtreeHasEffects =
