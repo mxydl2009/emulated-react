@@ -3,6 +3,7 @@ import { Action } from 'shared/ReactTypes';
 // Dispatcher是所有的Hooks集合，在源码里，hook都是dispatch函数
 export interface Dispatcher {
 	useState: <T>(initialState: T | (() => T)) => [T, Dispatch<T>];
+	useEffect: (callback: () => void, deps: any[] | undefined) => void;
 }
 
 export type Dispatch<T> = (action: Action<T>) => void;

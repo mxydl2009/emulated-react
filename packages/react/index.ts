@@ -11,6 +11,15 @@ export const useState: Dispatcher['useState'] = (initialState: any) => {
 	return dispatcher.useState(initialState);
 };
 
+export const useEffect: Dispatcher['useEffect'] = (
+	create: () => void,
+	deps: any[] | undefined
+) => {
+	// 获取当前的Dispatcher.useState, 需要去resolveDispatcher
+	const dispatcher = resolveDispatcher();
+	return dispatcher.useEffect(create, deps);
+};
+
 export const __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
 	currentDispatcher
 };
