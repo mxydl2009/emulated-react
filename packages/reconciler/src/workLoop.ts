@@ -1,8 +1,13 @@
 import { scheduleMicroTask } from 'hostConfig';
 import { beginWork } from './beginWork';
-import { commitMutationEffects } from './commitWork';
+import {
+	commitHookEffectListCreate,
+	commitHookEffectListDestroy,
+	commitHookEffectListUnmount,
+	commitMutationEffects
+} from './commitWork';
 import { completeWork } from './completeWork';
-import { MutationMask, NoFlags } from './fiberFlags';
+import { MutationMask, NoFlags, PassiveMask } from './fiberFlags';
 import {
 	Lane,
 	NoLane,
@@ -11,15 +16,27 @@ import {
 	markRootFinished,
 	mergeLanes
 } from './fiberLanes';
-import { FiberNode, FiberRootNode, createWorkInProgress } from './fiberNode';
+import {
+	FiberNode,
+	FiberRootNode,
+	PendingPassiveEffects,
+	createWorkInProgress
+} from './fiberNode';
 import { flushSyncCallbacks, scheduleSyncCallback } from './syncTaskQueue';
 import { HostRoot } from './workTag';
+import {
+	unstable_scheduleCallback as scheduleCallback,
+	unstable_NormalPriority as NormalPriority
+} from 'scheduler';
+import { HookHasEffect, Passive } from './hookEffectTags';
 
 // 存储工作的fiber
 let workInProgress: FiberNode | null = null;
 
 // 本次更新的Lane
 let wipRootRenderLane: Lane = NoLane;
+
+let rootDoesHasPassiveEffects = false;
 
 /**
  * 由产生更新的fiber找到hostRootFiber，因为每次更新渲染都从顶层的fiber开始构建fiber树
@@ -157,6 +174,21 @@ function commitRoot(root: FiberRootNode) {
 
 	// 移除已消费的lane
 	markRootFinished(root, lane);
+
+	if (
+		(finishedWork.flags & PassiveMask) !== NoFlags ||
+		(finishedWork.subtreeFlags & PassiveMask) !== NoFlags
+	) {
+		// 需要执行effect副作用
+		if (!rootDoesHasPassiveEffects) {
+			rootDoesHasPassiveEffects = true;
+			// 调度effect副作用
+			scheduleCallback(NormalPriority, () => {
+				flushPassiveEffects(root.pendingPassiveEffects);
+				return;
+			});
+		}
+	}
 	// 判断三个子阶段是否需要各自的操作
 
 	const subtreeHasEffects =
@@ -167,12 +199,37 @@ function commitRoot(root: FiberRootNode) {
 		// beforeMutation
 
 		// mutation
-		commitMutationEffects(finishedWork);
+		commitMutationEffects(finishedWork, root);
 		root.current = finishedWork;
 		// layout
 	} else {
 		root.current = finishedWork;
 	}
+
+	rootDoesHasPassiveEffects = false;
+	// TODO: 为什么又重新调度
+	ensureRootIsScheduled(root);
+}
+
+function flushPassiveEffects(pendingPassiveEffects: PendingPassiveEffects) {
+	// 执行卸载组件的destroy
+	pendingPassiveEffects.unmount.forEach((effect) => {
+		commitHookEffectListUnmount(Passive, effect);
+	});
+	pendingPassiveEffects.unmount = [];
+
+	// 执行更新组件的destroy
+	pendingPassiveEffects.update.forEach((effect) => {
+		commitHookEffectListDestroy(Passive | HookHasEffect, effect);
+	});
+	// 执行更新组件的create
+	pendingPassiveEffects.update.forEach((effect) => {
+		commitHookEffectListCreate(Passive | HookHasEffect, effect);
+	});
+
+	pendingPassiveEffects.update = [];
+
+	flushSyncCallbacks();
 }
 
 function workLoop() {
