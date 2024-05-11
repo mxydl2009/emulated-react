@@ -68,17 +68,72 @@ shared的internals同样导入自React)
 
 hook函数的执行流程：寻找对应的Hook数据 -> 根据hook数据计算出新数据 -> 返回新数据和dispatch
 
-问题1: hooks需要在函数的顶级作用域执行, 否则应该报错. 而且, 对于mount流程和update流程, hooks的逻辑也不尽相同. 因此, 对于hooks来说, 怎么能做到感知执行上下文呢? 或者说, hooks在执行的过程中, 是如何得知执行上下文?
+Q1: hooks需要在函数的顶级作用域执行, 否则应该报错. 而且, 对于mount流程和update流程, hooks的逻辑也不尽相同. 因此, 对于hooks来说, 怎么能做到感知执行上下文呢? 或者说, hooks在执行的过程中, 是如何得知执行上下文?
 
-解答1: 在不同的上下文中, 执行的hook不是同一个函数. 在不同的上下文, 要实现不同的hook函数, 也就是说, 不同的上下文对应了不同的hooks集合. 如下图所示. reconciler可以获悉当前是mount还是update，因此具体的Hook实现是在reconciler中. Hook函数在reconciler中具体实现（会与fiber相关）。
+A1: 在不同的上下文中, 执行的hook不是同一个函数. 在不同的上下文, 要实现不同的hook函数, 也就是说, 不同的上下文对应了不同的hooks集合. 如下图所示. reconciler可以获悉当前是mount还是update，因此具体的Hook实现是在reconciler中. Hook函数在reconciler中具体实现（会与fiber相关）。
 Hooks会在react中导入，React提供一个中间层用来存储当前使用的hooks集合, React中的Hook只是定义了一个很简单的函数，最核心的就是`resolveDispatcher`用来解析出到底使用哪个hooks集合，然后再调用解析后的Hook函数。
 
 ![hooks集合映射图](imags/hooks集合映射图.png)
 hooks集合映射图
 
-问题2： Hook如何记录自身的数据
+Q2： Hook如何记录自身的数据
 
-解答2： hook是一种数据结构，每个Hook数据结构会与use...的函数进行对应（链表结构顺序对应），Hook将自身的数据记录在当前组件(fiber节点的memoizedState)上。
+A2： hook是一种数据结构，每个Hook数据结构会与use...的函数进行对应（链表结构顺序对应），Hook将自身的数据记录在当前组件(fiber节点的memoizedState)上。
+
+Q3: 如何获取Hook数据
+
+A3: mount流程中，Hook数据是需要进行创建的。而在更新流程中，函数组件在调用Hook函数时，会查找对应的Hook数据。查找Hook数据的过程，是根据当前组件的fiber节点的alternate找到该节点对应的旧节点，从旧节点上找到对应的Hook数据。找到对应的Hook后，在根据之前的Hook，重新创建Hook数据。
+
+### useEffect
+
+useEffect: commit阶段完成后异步执行, 即浏览器重绘后执行
+
+useLayoutEffect: commit阶段完成后同步执行，此时浏览器还未重绘
+
+useInsertionEffect: commit阶段完成后同步执行， 获取不到DOM的引用，主要是为css-in-js的库使用
+
+- 不同effect共用同一个机制, 通过effectTag来区分
+- 保存依赖
+- 保存create回调和destroy回调
+- 区分是否需要触发create回调（mount、依赖变化）
+
+useEffect除了Hook公共数据结构外，有其独特的Effect数据结构如下：
+
+```js
+export interface Effect {
+	// 区分是哪种类型的副作用: Passive | Layout
+	tag: EffectTag;
+	// 回调函数
+	create: EffectCallback;
+	destroy: EffectCallback | void;
+	// 依赖数组
+	deps: EffectDeps;
+	// 指向下一个Effect
+	next: Effect;
+}
+```
+
+并且组件内部的useEffect除了与其他Hook函数形成链表外，多个useEffect会形成Effect环状链表（即多个Effect数据结构形成环状链表），Effect数据保存在fiber节点的updateQueue里
+
+```js
+fiber.updateQueue.lastEffect = effect;
+```
+
+#### useEffect副作用执行
+
+- render阶段，发现fiber节点上有副作用（mount、依赖变化）
+- commit阶段，**调度副作用函数**，收集副作用Effect数据，执行副作用函数
+  - 在fiberRootNode上收集Effect，将每个有effect副作用的fiber节点上的updateQueue上的effect环状链表收集到fiberRootNode上。
+  - 执行副作用：先执行所有的destroy，再执行create
+
+#### 调度器的使用
+
+调度副作用使用的是React官方的scheduler包
+
+```bash
+pnpm i -w scheduler
+pnpm i -D -w @types/scheduler
+```
 
 ### mount阶段
 
