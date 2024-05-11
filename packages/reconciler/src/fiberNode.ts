@@ -3,7 +3,15 @@ import { Props, Key, Ref, ReactElementType } from 'shared/ReactTypes';
 import { Flags, NoFlags } from './fiberFlags';
 import { ContainerType } from 'hostConfig';
 import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
+import { Effect } from './fiberHooks';
 // import { UpdateQueue } from './updateQueue';
+
+export interface PendingPassiveEffects {
+	// 收集卸载时的destroy回调
+	unmount: Effect[];
+	// 收集更新时的create回调
+	update: Effect[];
+}
 
 // FiberNode既作为数据存储的单元，也作为工作单元
 export class FiberNode {
@@ -81,6 +89,8 @@ export class FiberRootNode {
 	// 本次更新要消费的Lane
 	finishedLane: Lane;
 
+	pendingPassiveEffects: PendingPassiveEffects | null;
+
 	constructor(container: ContainerType, hostRootFiber: FiberNode) {
 		this.container = container;
 		this.current = hostRootFiber;
@@ -88,6 +98,10 @@ export class FiberRootNode {
 		hostRootFiber.stateNode = this;
 		this.pendingLanes = NoLanes;
 		this.finishedLane = NoLane;
+		this.pendingPassiveEffects = {
+			unmount: [],
+			update: []
+		};
 	}
 }
 
