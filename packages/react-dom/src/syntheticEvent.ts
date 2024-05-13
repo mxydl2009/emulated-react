@@ -1,5 +1,11 @@
 import { ContainerType } from 'hostConfig';
 import { Props } from 'shared/ReactTypes';
+import {
+	// unstable_ImmediatePriority as ImmediatePriority,
+	unstable_UserBlockingPriority as UserBlockingPriority,
+	unstable_NormalPriority as NormalPriority,
+	unstable_runWithPriority as runWithPriority
+} from 'scheduler';
 
 // 保存组件的props
 export const elementPropsKey = '__component_props__';
@@ -20,7 +26,7 @@ export interface Paths {
 	bubble: Array<Element>;
 }
 
-const validEventList = ['click'];
+export const validEventList = ['click', 'dblclick'];
 
 /**
  * 将组件的props保存到DOM元素上
@@ -46,6 +52,10 @@ export function initEvent(container: ContainerType, eventType: string) {
 	container.addEventListener(eventType, function (event) {
 		dispatchEvent(container, eventType, event);
 	});
+}
+
+export function initEvents(container: ContainerType, events: string[]) {
+	events.forEach((event) => initEvent(container, event));
 }
 
 /**
@@ -104,7 +114,8 @@ export function getEventCallbackNameFromEventType(
 	eventType: string
 ): string[] | undefined {
 	return {
-		click: ['onClickCapture', 'onClick']
+		click: ['onClickCapture', 'onClick'],
+		dblclick: ['onDoubleClickCapture', 'onDoubleClick']
 	}[eventType];
 }
 
@@ -119,12 +130,35 @@ export function createSyntheticEvent(event: Event) {
 	return syntheticEvent;
 }
 
+// 触发更新的回调函数用指定优先级调度
 export function triggerEventFlow(eventCallbacks: eventCallback[], se) {
 	for (let i = 0; i < eventCallbacks.length; i++) {
 		const callback = eventCallbacks[i];
-		callback.call(null, se);
+		const priority = eventTypeToSchedulerPriority(se.type);
+		// 触发更新的回调函数用指定优先级调度
+		runWithPriority(priority, callback.bind(null, se));
+		// callback.call(null, se);
 		if (se.__stopPropagation) {
 			break;
 		}
+	}
+}
+
+// 根据事件类型确定调度器内部需要的优先级，实际上意味着产生更新的上下文（事件）对应着不同的优先级
+export function eventTypeToSchedulerPriority(eventType: string) {
+	switch (eventType) {
+		// case 'click':
+		// case 'keydown':
+		// case 'keyup':
+		// 	return ImmediatePriority;
+		case 'scroll':
+			// case 'click':
+			return UserBlockingPriority;
+		case 'click':
+			return NormalPriority;
+		case 'dblclick':
+			return UserBlockingPriority;
+		default:
+			return NormalPriority;
 	}
 }
