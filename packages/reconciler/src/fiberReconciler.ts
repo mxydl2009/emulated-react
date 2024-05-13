@@ -9,11 +9,11 @@ import {
 } from './updateQueue';
 import { ReactElementType } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
+import { requestUpdateLane } from './fiberLanes';
 import {
-	// SyncLane,
-	// requestUpdateLane,
-	requestUpdateLaneOnMount
-} from './fiberLanes';
+	unstable_ImmediatePriority as ImmediatePriority,
+	unstable_runWithPriority as runWithPriority
+} from 'scheduler';
 
 /**
  * createRoot方法内部执行，用于创建FiberRootNode
@@ -39,16 +39,17 @@ export function updateContainer(
 	root: FiberRootNode
 ) {
 	const hostRootFiber = root.current;
-	// const lane = requestUpdateLane();
-	const lane = requestUpdateLaneOnMount();
-	// 由element生成更新
-	const update = createUpdate<ReactElementType | null>(element, lane);
-	// 将更新插入到hostRoot的队列中
-	enqueueUpdate(
-		hostRootFiber.updateQueue as UpdateQueue<ReactElementType | null>,
-		update
-	);
-	// 开启hostRootFiber的更新调度
-	scheduleUpdateOnFiber(hostRootFiber, lane);
+	runWithPriority(ImmediatePriority, () => {
+		const lane = requestUpdateLane();
+		// 由element生成更新
+		const update = createUpdate<ReactElementType | null>(element, lane);
+		// 将更新插入到hostRoot的队列中
+		enqueueUpdate(
+			hostRootFiber.updateQueue as UpdateQueue<ReactElementType | null>,
+			update
+		);
+		// 开启hostRootFiber的更新调度
+		scheduleUpdateOnFiber(hostRootFiber, lane);
+	});
 	return element;
 }
