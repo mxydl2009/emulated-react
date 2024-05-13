@@ -5,6 +5,7 @@ import { ContainerType } from 'hostConfig';
 import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
 import { Effect } from './fiberHooks';
 // import { UpdateQueue } from './updateQueue';
+import { CallbackNode } from 'scheduler';
 
 export interface PendingPassiveEffects {
 	// 收集卸载时的destroy回调
@@ -91,6 +92,9 @@ export class FiberRootNode {
 
 	pendingPassiveEffects: PendingPassiveEffects | null;
 
+	callbackNode: CallbackNode | null;
+	callbackPriority: Lane;
+
 	constructor(container: ContainerType, hostRootFiber: FiberNode) {
 		this.container = container;
 		this.current = hostRootFiber;
@@ -102,6 +106,8 @@ export class FiberRootNode {
 			unmount: [],
 			update: []
 		};
+		this.callbackNode = null;
+		this.callbackPriority = NoLane;
 	}
 }
 

@@ -9,7 +9,11 @@ import {
 } from './updateQueue';
 import { ReactElementType } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
-import { requestUpdateLane } from './fiberLanes';
+import {
+	// SyncLane,
+	// requestUpdateLane,
+	requestUpdateLaneOnMount
+} from './fiberLanes';
 
 /**
  * createRoot方法内部执行，用于创建FiberRootNode
@@ -35,7 +39,8 @@ export function updateContainer(
 	root: FiberRootNode
 ) {
 	const hostRootFiber = root.current;
-	const lane = requestUpdateLane();
+	// const lane = requestUpdateLane();
+	const lane = requestUpdateLaneOnMount();
 	// 由element生成更新
 	const update = createUpdate<ReactElementType | null>(element, lane);
 	// 将更新插入到hostRoot的队列中

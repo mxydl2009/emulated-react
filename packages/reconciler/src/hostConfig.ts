@@ -1,5 +1,4 @@
-// @ts-nocheck
-
+/* eslint-disable */
 import { Props, Type } from 'shared/ReactTypes';
 
 export type ContainerType = any;

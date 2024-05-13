@@ -2,6 +2,7 @@ import { Dispatch, Dispatcher } from 'react/src/currentDispatcher';
 import { FiberNode } from './fiberNode';
 import internals from 'shared/internals';
 import {
+	Update,
 	UpdateQueue,
 	createUpdate,
 	createUpdateQueue,
@@ -33,6 +34,8 @@ export interface Hook {
 	updateQueue: unknown;
 	// 每个函数组件内的Hook是链表结构，用于保存下一个Hook，因此Hook的相对顺序不能更改（所以Hook不能用于逻辑分支里）
 	next: Hook | null;
+	baseState: any;
+	baseQueue: Update<any> | null;
 }
 
 export interface Effect {
@@ -193,18 +196,45 @@ function updateState<State>(
 	const hook = updateWorkInProgressHook();
 	// 计算新的state
 	const queue = hook.updateQueue as UpdateQueue<State>;
+	const baseState = hook.baseState || hook.memoizedState;
 	const pending = queue.shared.pending;
+	const current = currentHook;
+	let baseQueue = current.baseQueue;
+
 	// TODO: 消费pending后，reset，事实上，pending中可能有不同优先级的更新，不能直接reset为null
 	// 这里只处理了SyncLane这种简单的情形（或者说pending中的更新都是一个优先级）
-	queue.shared.pending = null;
+	// queue.shared.pending = null;
 
 	if (pending !== null) {
-		const { memoizedState } = processUpdateQueue(
-			hook.memoizedState,
-			pending,
-			renderLane
-		);
+		if (baseQueue !== null) {
+			// 合并baseQueue和pending: 把baseQueue插入到pending，变为pending的第一个元素
+			const baseFirst = baseQueue.next;
+			const pendingFirst = pending.next;
+			baseQueue.next = pendingFirst;
+			pending.next = baseFirst;
+		}
+		baseQueue = pending;
+		// 保存在currentHook中
+		current.baseQueue = pending;
+		// 清除当前Hook的pendingUpdate，因为已经保存到baseQueue了
+		queue.shared.pending = null;
+		// const { memoizedState } = processUpdateQueue(
+		// 	hook.memoizedState,
+		// 	pending,
+		// 	renderLane
+		// );
+		// hook.memoizedState = memoizedState;
+	}
+
+	if (baseQueue !== null) {
+		const {
+			memoizedState,
+			baseQueue: newBaseQueue,
+			baseState: newBaseState
+		} = processUpdateQueue(baseState, baseQueue, renderLane);
 		hook.memoizedState = memoizedState;
+		hook.baseState = newBaseState;
+		hook.baseQueue = newBaseQueue;
 	}
 
 	return [hook.memoizedState, queue.dispatch as Dispatch<State>];
@@ -268,6 +298,7 @@ function dispatchSetState<State>(
 	// 获取此次更新的优先级, requestUpdateLane可以获取触发更新的上下文，根据不同上下文返回不同的优先级
 	const lane = requestUpdateLane();
 	const update = createUpdate<Action<State>>(action, lane);
+	// 为当前fiber节点的当前Hook的updateQueue添加更新
 	enqueueUpdate(updateQueue, update);
 	// 从当前触发更新的fiber节点开始调度更新，逐层向上找到根节点，开始渲染fiber树进入更新流程
 	scheduleUpdateOnFiber(fiber, lane);
@@ -278,7 +309,9 @@ function mountWorkInProgressHook(): Hook {
 	const hook = {
 		memoizedState: null,
 		updateQueue: null,
-		next: null
+		next: null,
+		baseState: null,
+		baseQueue: null
 	};
 	if (workInProgressHook === null) {
 		// mount阶段第一个Hook
@@ -326,7 +359,9 @@ function updateWorkInProgressHook(): Hook {
 	const newHook = {
 		memoizedState: currentHook.memoizedState,
 		updateQueue: currentHook.updateQueue,
-		next: null
+		next: null,
+		baseState: currentHook.baseState,
+		baseQueue: currentHook.baseQueue
 	};
 
 	if (workInProgressHook === null) {

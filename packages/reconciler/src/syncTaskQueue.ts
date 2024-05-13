@@ -23,6 +23,7 @@ export function flushSyncCallbacks() {
 		}
 		isFlushingSyncQueue = true;
 		try {
+			// 执行渲染任务
 			syncQueue.forEach((cb) => cb());
 		} catch (e) {
 			if (__DEV__) {
