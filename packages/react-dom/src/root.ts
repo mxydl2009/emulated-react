@@ -4,10 +4,11 @@ import {
 	createContainer,
 	updateContainer
 } from 'reconciler/src/fiberReconciler';
-import { initEvent } from './syntheticEvent';
+import { initEvents, validEventList } from './syntheticEvent';
 
 export function createRoot(container: ContainerType) {
-	initEvent(container, 'click');
+	// initEvent(container, 'click');
+	initEvents(container, validEventList);
 	const root = createContainer(container);
 	return {
 		render(element: ReactElementType) {

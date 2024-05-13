@@ -14,7 +14,6 @@ export function createInstance(type: Type, props: Props): any {
 }
 
 export function createTextInstance(content: string | number): any {
-	console.log(content);
 	const textNode = document.createTextNode(String(content));
 	return textNode;
 }
