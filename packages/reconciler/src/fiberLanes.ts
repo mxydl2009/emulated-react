@@ -1,3 +1,4 @@
+import internals from 'shared/internals';
 import { FiberRootNode } from './fiberNode';
 import {
 	unstable_getCurrentPriorityLevel as getCurrentPriorityLevel,
@@ -13,14 +14,17 @@ export type Lane = number;
 export type Lanes = number;
 
 // 二进制的好处: 1. 节省空间; 2. 可以比较大小; 3. 可以通过逻辑运算，获取同属于一个批次的优先级;
-export const SyncLane = 0b0001;
+export const SyncLane = 0b00001;
 // 连续的用户交互事件，比如拖拽、scroll等等
-export const InputContinuousLane = 0b0010;
+export const InputContinuousLane = 0b00010;
+export const DefaultLane = 0b00100;
+// useTransition需要定义的lane
+export const TransitionLane = 0b01000;
 
-export const DefaultLane = 0b0100;
-export const IdleLane = 0b1000;
-export const NoLane = 0b0000;
-export const NoLanes = 0b0000;
+export const IdleLane = 0b10000;
+
+export const NoLane = 0b00000;
+export const NoLanes = 0b00000;
 
 export function mergeLanes(laneA: Lane, laneB: Lane) {
 	return laneA | laneB;
@@ -31,6 +35,9 @@ export function isSubsetOfLanes(set: Lanes, subset: Lane) {
 	return (set & subset) === subset;
 }
 export function requestUpdateLane() {
+	const currentBatchConfig = internals.currentBatchConfig;
+	const isTransition = currentBatchConfig !== null;
+	if (isTransition) return TransitionLane;
 	const currentSchedulerPriority = getCurrentPriorityLevel();
 	const currentLane = schedulerPriorityToLane(currentSchedulerPriority);
 	return currentLane;

@@ -23,6 +23,7 @@ let currentHook: Hook | null = null;
 let renderLane: Lane = null;
 
 const currentDispatcher = internals.currentDispatcher;
+const currentBatchConfig = internals.currentBatchConfig;
 
 type EffectCallback = () => void;
 type EffectDeps = any[] | undefined | null;
@@ -87,14 +88,16 @@ export function renderWithHooks(wip: FiberNode, lane: Lane) {
 const HooksDispatcherOnMount: Dispatcher = {
 	// React会在mount阶段调用useState
 	useState: mountState,
-	useEffect: mountEffect
+	useEffect: mountEffect,
+	useTransition: mountTransition
 };
 
 // 定义update阶段的Hooks集合
 const HooksDispatcherOnUpdate: Dispatcher = {
 	// React会在update阶段调用useState
 	useState: updateState,
-	useEffect: updateEffect
+	useEffect: updateEffect,
+	useTransition: updateTransition
 };
 
 function mountState<State>(
@@ -282,6 +285,33 @@ function updateEffect(create: () => void, deps) {
 			nextDeps
 		);
 	}
+}
+
+function startTransition(
+	setPending: Dispatch<boolean>,
+	callback: () => void
+): void {
+	setPending(true);
+	const prevTransition = currentBatchConfig.transition;
+	currentBatchConfig.transition = 1;
+	callback();
+	setPending(false);
+	currentBatchConfig.transition = prevTransition;
+}
+
+function mountTransition(): [boolean, () => void] {
+	const [isPending, setPending] = mountState(false);
+	const hook = mountWorkInProgressHook();
+	const start = startTransition.bind(null, setPending);
+	hook.memoizedState = start;
+	return [isPending, start];
+}
+
+function updateTransition(): [boolean, () => void] {
+	const [isPending] = updateState(true);
+	const hook = updateWorkInProgressHook();
+	const start = hook.memoizedState;
+	return [isPending, start];
 }
 /**
  * 创建更新，将更新入队，从当前fiber节点调度更新

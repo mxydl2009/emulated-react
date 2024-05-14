@@ -527,6 +527,20 @@ Lane模型
 
 在这一基本思路基础上，可以做一些优化：实际上，在消耗高优先级更新时，也是按照顺序消耗，只是遇到第一个要跳过的更新时，将此时计算得到的state值赋予baseState，并且将该更新保存到baseQueue。下一次消耗低优先级的更新时，就可以从第一个要跳过的更新baseQueue和此时的baseState开始计算，节省了计算成本。
 
+### useTransition
+
+```js
+// isPending标识本次更新任务是否完成，setTransition改变更新的优先级
+const [isPending, setTransition] = useTransition();
+```
+
+通过setTransition将本次更新的上下文优先级改为TransitionLane，让更新变为优先级低的更新，从而可以使得用户交互的优先级打断TransitionLane的更新任务，保证用户交互的响应性。
+
+从useTransition的返回值可以看到包含一个状态和一个方法, 说明内部使用了useState来更新状态, 在setTransition方法执行时，先更改全局优先级上下文变量，让setTransition方法内的回调函数产生的更新优先级降低为TransitionLane，调用后，再恢复全局优先级上下文变量。
+
+mount阶段: mountState -> isPending为false -> 创建hook -> startTransition存储在hook 。memoizedState -> startTransition返回为setTransition;
+update阶段: dispatchSetState -> isPending为true -> 从hook.memoizedState获取并调用startTransition -> 更改优先级 -> (调用callback函数, dispatchSetState -> isPending为false) --> 恢复优先级
+
 ## 常见问题记录
 
 Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？
@@ -538,3 +552,7 @@ A: 主要是因为既要保存对第一个数据的引用，又要考虑插入�
 
 Q: React并发更新下，开发者如何优化代码?
 A: **首先，一定不要编写耗时的组件!!!** 组件一旦耗时(比如超过5ms)，即便是在并发更新下，也会有卡顿发生。因为并发更新下，时间切片的颗粒度是指fiber节点的reconcileChildren，组件在执行完reconcileChildren才会交出执行权给浏览器，因此一旦组件的耗时长了，势必会导致掉帧。因此，如果组件复杂耗时，那么一定要拆分成低耗时、多节点的情况;
+
+```
+
+```
