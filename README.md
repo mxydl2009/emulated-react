@@ -541,6 +541,22 @@ const [isPending, setTransition] = useTransition();
 mount阶段: mountState -> isPending为false -> 创建hook -> startTransition存储在hook 。memoizedState -> startTransition返回为setTransition;
 update阶段: dispatchSetState -> isPending为true -> 从hook.memoizedState获取并调用startTransition -> 更改优先级 -> (调用callback函数, dispatchSetState -> isPending为false) --> 恢复优先级
 
+### useRef
+
+useRef就是在Hook上记录一个对象，在适当的时候会给current属性赋值;
+
+不管是mount还是update，都是获取当前的Hook，然后返回存储在hook.memoizedState上的对象;
+
+#### 给ref赋值
+
+ref对象拿到后，有两种处理方式:
+
+- ref对象不作为prop传到HostComponent上时，只是作为函数组件在多次执行之间保存数据。
+- ref对象作为prop传到HostComponent上时，React需要在组件挂载和更新后给ref对象重新赋值为当前的DOM节点，在组件卸载时，将ref对象赋值为null，防止内存泄漏
+
+1. 在Mutation阶段，解绑之前的ref: 将ref置空
+2. 在layout阶段，绑定新的ref: 将ref赋值
+
 ## 常见问题记录
 
 Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？

@@ -9,10 +9,12 @@ import {
 import {
 	ChildDeletion,
 	Flags,
+	LayoutMask,
 	MutationMask,
 	NoFlags,
 	PassiveEffect,
 	Placement,
+	Ref,
 	Update
 } from './fiberFlags';
 import { FiberNode, FiberRootNode, PendingPassiveEffects } from './fiberNode';
@@ -27,37 +29,79 @@ import { HookHasEffect } from './hookEffectTags';
 
 let nextEffect: FiberNode | null = null;
 
-export const commitMutationEffects = (
-	finishedWork: FiberNode,
-	root: FiberRootNode
+export const commitEffects = (
+	phase: 'mutation' | 'layout',
+	mask: number
+	// callback: (fiber: FiberNode, root: FiberRootNode) => void
 ) => {
-	// 向下找，直到没有副作用的子树或者到叶子节点，
-	// 然后再向上回退，类似completeWork的流程一样，将沿途的副作用执行
-	nextEffect = finishedWork;
-	while (nextEffect !== null) {
-		const child: FiberNode | null = nextEffect.child;
-		// 当前fiber节点的子树上有副作用, 则继续向下遍历,否则向上
-		if (
-			(nextEffect.subtreeFlags & (MutationMask | PassiveEffect)) !== NoFlags &&
-			child !== null
-		) {
-			nextEffect = child;
-		} else {
-			// 要么找到叶子节点，要么找到非副作用的子树，可以回退了
-			up: while (nextEffect !== null) {
-				// 执行nextEffect节点的副作用
-				commitMutationEffectsOnFiber(nextEffect, root);
-				const sibling = nextEffect.sibling;
-				if (sibling !== null) {
-					nextEffect = sibling;
-					break up;
-				} else {
-					nextEffect = nextEffect.return;
+	const phaseCallbackDic = {
+		mutation: commitMutationEffectsOnFiber,
+		layout: commitLayoutEffectsOnFiber
+	};
+	return (finishedWork: FiberNode, root: FiberRootNode) => {
+		// 向下找，直到没有副作用的子树或者到叶子节点，
+		// 然后再向上回退，类似completeWork的流程一样，将沿途的副作用执行
+		nextEffect = finishedWork;
+		while (nextEffect !== null) {
+			const child: FiberNode | null = nextEffect.child;
+			// 当前fiber节点的子树上有副作用, 则继续向下遍历,否则向上
+			if ((nextEffect.subtreeFlags & mask) !== NoFlags && child !== null) {
+				nextEffect = child;
+			} else {
+				// 要么找到叶子节点，要么找到非副作用的子树，可以回退了
+				up: while (nextEffect !== null) {
+					// 执行nextEffect节点的副作用
+					phaseCallbackDic[phase](nextEffect, root);
+					const sibling = nextEffect.sibling;
+					if (sibling !== null) {
+						nextEffect = sibling;
+						break up;
+					} else {
+						nextEffect = nextEffect.return;
+					}
 				}
 			}
 		}
-	}
+	};
 };
+
+export const commitLayoutEffects = commitEffects('layout', LayoutMask);
+export const commitMutationEffects = commitEffects(
+	'mutation',
+	MutationMask | PassiveEffect
+);
+
+// export const commitMutationEffects = (
+// 	finishedWork: FiberNode,
+// 	root: FiberRootNode
+// ) => {
+// 	// 向下找，直到没有副作用的子树或者到叶子节点，
+// 	// 然后再向上回退，类似completeWork的流程一样，将沿途的副作用执行
+// 	nextEffect = finishedWork;
+// 	while (nextEffect !== null) {
+// 		const child: FiberNode | null = nextEffect.child;
+// 		// 当前fiber节点的子树上有副作用, 则继续向下遍历,否则向上
+// 		if (
+// 			(nextEffect.subtreeFlags & (MutationMask | PassiveEffect)) !== NoFlags &&
+// 			child !== null
+// 		) {
+// 			nextEffect = child;
+// 		} else {
+// 			// 要么找到叶子节点，要么找到非副作用的子树，可以回退了
+// 			up: while (nextEffect !== null) {
+// 				// 执行nextEffect节点的副作用
+// 				commitMutationEffectsOnFiber(nextEffect, root);
+// 				const sibling = nextEffect.sibling;
+// 				if (sibling !== null) {
+// 					nextEffect = sibling;
+// 					break up;
+// 				} else {
+// 					nextEffect = nextEffect.return;
+// 				}
+// 			}
+// 		}
+// 	}
+// };
 
 function commitMutationEffectsOnFiber(
 	finishedWork: FiberNode,
@@ -88,6 +132,44 @@ function commitMutationEffectsOnFiber(
 		// update类型包含了mount和update
 		commitPassiveEffects(finishedWork, root, 'update');
 		finishedWork.flags &= ~PassiveEffect;
+	}
+	if ((flags & Ref) !== NoFlags && finishedWork.tag === HostComponent) {
+		safelyDetachRef(finishedWork);
+	}
+}
+
+function commitLayoutEffectsOnFiber(
+	finishedWork: FiberNode
+	// root: FiberRootNode
+) {
+	const { flags, tag } = finishedWork;
+	if ((flags & Ref) !== NoFlags && tag === HostComponent) {
+		safelyAttachRef(finishedWork);
+		finishedWork.flags &= ~Ref;
+	}
+}
+
+function safelyDetachRef(fiber: FiberNode) {
+	const { ref } = fiber;
+	if (ref !== null) {
+		// 解绑之前的ref
+		if (typeof ref === 'function') {
+			ref(null);
+		} else {
+			ref.current = null;
+		}
+	}
+}
+
+function safelyAttachRef(fiber: FiberNode) {
+	const { ref } = fiber;
+	if (ref !== null) {
+		const instance = fiber.stateNode;
+		if (typeof ref === 'function') {
+			ref(instance);
+		} else {
+			ref.current = instance;
+		}
 	}
 }
 
@@ -302,7 +384,7 @@ function commitDeletion(childToDelete: FiberNode, root: FiberRootNode) {
 		switch (unmountFiber.tag) {
 			case HostComponent:
 				// 1. 对于hostComponent，要解绑ref
-				// commitDeletionHostComponent(unmountFiber);
+				safelyDetachRef(unmountFiber);
 				// 2. 赋值rootHostComponent
 				if (hostChildrenToDelete.length === 0) {
 					recordHostChildrenToDelete(hostChildrenToDelete, unmountFiber);

@@ -89,7 +89,8 @@ const HooksDispatcherOnMount: Dispatcher = {
 	// React会在mount阶段调用useState
 	useState: mountState,
 	useEffect: mountEffect,
-	useTransition: mountTransition
+	useTransition: mountTransition,
+	useRef: mountRef
 };
 
 // 定义update阶段的Hooks集合
@@ -97,7 +98,8 @@ const HooksDispatcherOnUpdate: Dispatcher = {
 	// React会在update阶段调用useState
 	useState: updateState,
 	useEffect: updateEffect,
-	useTransition: updateTransition
+	useTransition: updateTransition,
+	useRef: updateRef
 };
 
 function mountState<State>(
@@ -312,6 +314,19 @@ function updateTransition(): [boolean, () => void] {
 	const hook = updateWorkInProgressHook();
 	const start = hook.memoizedState;
 	return [isPending, start];
+}
+
+function mountRef<T>(initialValue: T): { current: T } {
+	const hook = mountWorkInProgressHook();
+	hook.memoizedState = {
+		current: initialValue
+	};
+	return hook.memoizedState;
+}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function updateRef<T>(initialValue: T): { current: T } {
+	const hook = updateWorkInProgressHook();
+	return hook.memoizedState;
 }
 /**
  * 创建更新，将更新入队，从当前fiber节点调度更新

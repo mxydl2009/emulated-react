@@ -130,6 +130,7 @@ export const createWorkInProgress = (
 		wip.pendingProps = pendingProps;
 		// 清除老节点的副作用
 		wip.flags = NoFlags;
+		wip.subtreeFlags = NoFlags;
 		wip.deletions = null;
 	}
 	// TODO: 复用老节点的属性(究竟应该复用哪些属性)
@@ -138,6 +139,7 @@ export const createWorkInProgress = (
 	// wip.child = current.child;
 	wip.memoizedProps = current.memoizedProps;
 	wip.memoizedState = current.memoizedState;
+	wip.ref = current.ref;
 	return wip;
 };
 
@@ -146,7 +148,7 @@ export const createWorkInProgress = (
  * @param element
  */
 export function createFiberFromElement(element: ReactElementType) {
-	const { type, key, props } = element;
+	const { type, key, props, ref } = element;
 	let tag: WorkTag = FunctionComponent; // 默认为FunctionComponent;
 	if (typeof type === 'string') {
 		tag = HostComponent;
@@ -158,6 +160,7 @@ export function createFiberFromElement(element: ReactElementType) {
 	}
 	const fiber = new FiberNode(tag, props, key);
 	fiber.type = type;
+	fiber.ref = ref ? ref : null;
 	return fiber;
 }
 

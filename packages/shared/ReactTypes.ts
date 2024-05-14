@@ -2,7 +2,7 @@ import { REACT_FRAGMENT_TYPE } from './ReactSymbols';
 
 export type Type = ElementType;
 export type Key = string;
-export type Ref = string;
+export type Ref = { current: any } | ((instance: any) => void);
 export type REACT_FRAGMENT_TYPE = typeof REACT_FRAGMENT_TYPE;
 export interface Props {
 	children?: Array<ReactElementType> | undefined | ReactElementType;

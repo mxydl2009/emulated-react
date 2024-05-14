@@ -12,7 +12,7 @@ import {
 	HostText,
 	Fragment
 } from './workTag';
-import { NoFlags, Update } from './fiberFlags';
+import { NoFlags, Ref, Update } from './fiberFlags';
 import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
 
 /**
@@ -30,11 +30,17 @@ export const completeWork = (wip: FiberNode) => {
 				// 可以在fiberNode.updateQueue中记录变化的属性，然后在commit阶段更新
 				// 下面的方法是偷懒简化的，直接将所有属性重新保存到实例上， 只是方便实现事件系统。
 				updateFiberPropsToInstance(wip.stateNode, newProps);
+				if (current.ref !== wip.ref) {
+					markRef(wip);
+				}
 			} else {
 				// mount
 				const instance = createInstance(wip.type, newProps);
 				appendAllChildren(instance, wip);
 				wip.stateNode = instance;
+				if (wip.ref !== null) {
+					markRef(wip);
+				}
 			}
 			bubbleProperties(wip);
 			return null;
@@ -124,4 +130,8 @@ function bubbleProperties(wip: FiberNode) {
  */
 function markUpdate(wip: FiberNode) {
 	wip.flags |= Update;
+}
+
+function markRef(fiber: FiberNode) {
+	fiber.flags |= Ref;
 }
