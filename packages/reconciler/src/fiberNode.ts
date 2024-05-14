@@ -1,4 +1,10 @@
-import { FunctionComponent, WorkTag, HostComponent, Fragment } from './workTag';
+import {
+	FunctionComponent,
+	WorkTag,
+	HostComponent,
+	Fragment,
+	ContextProvider
+} from './workTag';
 import { Props, Key, Ref, ReactElementType } from 'shared/ReactTypes';
 import { Flags, NoFlags } from './fiberFlags';
 import { ContainerType } from 'hostConfig';
@@ -6,6 +12,7 @@ import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
 import { Effect } from './fiberHooks';
 // import { UpdateQueue } from './updateQueue';
 import { CallbackNode } from 'scheduler';
+import { REACT_PROVIDER_TYPE } from 'shared/ReactSymbols';
 
 export interface PendingPassiveEffects {
 	// 收集卸载时的destroy回调
@@ -111,7 +118,7 @@ export class FiberRootNode {
 	}
 }
 
-// 根据当前UI的fiber节点，创建一个新的fiber节点
+// 根据当前UI的fiber节点，创建一个新的fiber节点，即复用老的节点
 export const createWorkInProgress = (
 	// hostRootFiber节点
 	current: FiberNode,
@@ -140,6 +147,7 @@ export const createWorkInProgress = (
 	wip.memoizedProps = current.memoizedProps;
 	wip.memoizedState = current.memoizedState;
 	wip.ref = current.ref;
+	wip.child = current.child;
 	return wip;
 };
 
@@ -149,16 +157,21 @@ export const createWorkInProgress = (
  */
 export function createFiberFromElement(element: ReactElementType) {
 	const { type, key, props, ref } = element;
-	let tag: WorkTag = FunctionComponent; // 默认为FunctionComponent;
+	let fiberTag: WorkTag = FunctionComponent; // 默认为FunctionComponent;
 	if (typeof type === 'string') {
-		tag = HostComponent;
+		fiberTag = HostComponent;
+	} else if (
+		typeof type === 'object' &&
+		type.$$typeof === REACT_PROVIDER_TYPE
+	) {
+		fiberTag = ContextProvider;
 	} else if (typeof type !== 'function') {
 		if (__DEV__) {
 			console.warn('unKnown type.');
 		}
-		tag = HostComponent;
+		fiberTag = HostComponent;
 	}
-	const fiber = new FiberNode(tag, props, key);
+	const fiber = new FiberNode(fiberTag, props, key);
 	fiber.type = type;
 	fiber.ref = ref ? ref : null;
 	return fiber;

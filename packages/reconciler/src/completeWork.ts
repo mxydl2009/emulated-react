@@ -10,10 +10,12 @@ import {
 	HostComponent,
 	HostRoot,
 	HostText,
-	Fragment
+	Fragment,
+	ContextProvider
 } from './workTag';
 import { NoFlags, Ref, Update } from './fiberFlags';
 import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
+import { popProvider } from './fiberContext';
 
 /**
  * 将子节点的实例挂载到父实例上
@@ -42,6 +44,10 @@ export const completeWork = (wip: FiberNode) => {
 					markRef(wip);
 				}
 			}
+			bubbleProperties(wip);
+			return null;
+		case ContextProvider:
+			popProvider(wip.type._context);
 			bubbleProperties(wip);
 			return null;
 		case HostText:

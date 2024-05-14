@@ -169,7 +169,12 @@ function childReconciler(shouldTrackEffects: boolean) {
 	): FiberNode | null {
 		const before = existingChildren.get(key) || null;
 
-		if (typeof element === 'string' || typeof element === 'number') {
+		if (
+			typeof element === 'string' ||
+			typeof element === 'number' ||
+			typeof element === 'undefined' ||
+			element === null
+		) {
 			// HostText
 			if (before) {
 				// 能找到旧节点
@@ -216,9 +221,9 @@ function childReconciler(shouldTrackEffects: boolean) {
 					}
 					break;
 			}
-			if (Array.isArray(element)) {
-				// TODO:element是数组时，暂未实现, 如{[<li>2</li>, <li>3</li>]}
-			}
+			// if (Array.isArray(element)) {
+			// TODO:element是数组时，暂未实现, 如{[<li>2</li>, <li>3</li>]}
+			// }
 		}
 		// 如果当前元素是一个数组，将数组元素统一安排在一个Fragment中来处理
 		if (Array.isArray(element)) {

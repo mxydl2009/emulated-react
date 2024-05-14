@@ -554,6 +554,32 @@ ref对象拿到后，有两种处理方式:
 1. 在Mutation阶段，解绑之前的ref: 将ref置空
 2. 在layout阶段，绑定新的ref: 将ref赋值
 
+### useContext
+
+Context使用的方式
+
+1. 创建Context，传入默认值
+2. 将消费节点作为Provider节点的子孙节点, 在Provider中可以给context重新赋值
+3. 子孙消费节点使用useContext订阅数据
+4. 非子孙节点订阅的数据为默认值
+
+useContext的核心逻辑就是context对象按照Provider组件层级维护着一系列Provider提供的值和创建context传递的默认值，在每个Provider开始beginWork构建时，把Provider的value压栈，在Provider的completeWork时将value出栈，这样子孙节点在构建自己时，使用useContext获取到的就是最近的Provider上的value了;
+
+由于每个context对象维护着自己的一系列值，所以不同的context.Provider嵌套也没关系，不会相互干扰。
+
+#### useContext没有使用Hook保存数据
+
+useContext没有使用Hook保存数据，因此可以在条件语句中调用，也不存在与其他Hook的相对顺序问题。
+
+#### bailout优化策略与Context
+
+bailout优化策略：如果组件的shouldComponentUpdate返回true，表示组件没有更新，那么组件会跳过beginWork，复用上一次的渲染结果。
+当命中bailout策略的组件的子孙节点有订阅Context时，就会出问题。这些子孙节点由于复用了之前的渲染结果，所以无法获知Context是否有变化，从而可能会导致非预期的渲染发生。
+
+##### 解决办法
+
+React内部组件命中bailout策略时，仍然会进一步遍历子孙节点，检查是否有订阅Context。如果有订阅，那么就会沿父节点依次递归返回并标记沿途父节点为有Context订阅，这样即便命中bailout策略时，也会beginWork去渲染，从而避免非预期的渲染发生。
+
 ## 常见问题记录
 
 Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？

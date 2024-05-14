@@ -6,12 +6,14 @@ import {
 	HostComponent,
 	HostRoot,
 	HostText,
-	Fragment
+	Fragment,
+	ContextProvider
 } from './workTag';
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
 import { Lane } from './fiberLanes';
 import { Ref } from './fiberFlags';
+import { pushProvider } from './fiberContext';
 
 /**
  * 构造fiberNode的children，返回子FiberNode
@@ -30,6 +32,8 @@ export const beginWork = (wip: FiberNode, renderLane: Lane) => {
 			return updateFunctionComponent(wip, renderLane);
 		case Fragment:
 			return updateFragment(wip);
+		case ContextProvider:
+			return updateContextProvider(wip);
 		case HostText:
 			return null;
 		default:
@@ -98,6 +102,15 @@ function reconcileChildren(
 function updateFragment(wip: FiberNode) {
 	const nextChildren = wip.pendingProps.children;
 	reconcileChildren(wip, nextChildren);
+	return wip.child;
+}
+
+function updateContextProvider(wip: FiberNode) {
+	const providerType = wip.type;
+	const context = providerType._context;
+	const newProps = wip.pendingProps;
+	pushProvider(context, newProps.value);
+	reconcileChildren(wip, newProps.children);
 	return wip.child;
 }
 
