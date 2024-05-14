@@ -46,6 +46,7 @@ export const beginWork = (wip: FiberNode, renderLane: Lane) => {
 };
 
 function updateFunctionComponent(wip: FiberNode, renderLane: Lane) {
+	// functionComponent通过渲染函数获得子节点
 	const nextChildren = renderWithHooks(wip, renderLane);
 	reconcileChildren(wip, nextChildren);
 	return wip.child;

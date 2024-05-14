@@ -580,6 +580,24 @@ bailout优化策略：如果组件的shouldComponentUpdate返回true，表示组
 
 React内部组件命中bailout策略时，仍然会进一步遍历子孙节点，检查是否有订阅Context。如果有订阅，那么就会沿父节点依次递归返回并标记沿途父节点为有Context订阅，这样即便命中bailout策略时，也会beginWork去渲染，从而避免非预期的渲染发生。
 
+## 性能优化
+
+减少不必要的render函数执行，提高性能。
+
+### bailout策略
+
+命中bailout策略的组件不需要重新render，其子节点结构用上一次render的子节点结构即可。
+
+组件通过render函数的执行，获得其children子节点结构。减少render函数的执行，子节点们都复用原来的子节点。但是子节点的渲染函数可能还会调用，因为子节点需要获得子孙节点。
+
+对开发者的启示:
+
+- 分离状态: render函数中能抽离状态就抽离状态，将动与静分离.
+
+### eagerState策略
+
+触发的更新经过计算后状态前后一致，没必要调度新的更新。
+
 ## 常见问题记录
 
 Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？
