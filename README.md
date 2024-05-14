@@ -414,11 +414,8 @@ test-utils.ts文件是我们自己的测试工具，对外暴露一个renderInto
 ## rollup相关
 
 `@rollup/plugin-replace`: 在打包构建过程中替换目标字符串
+
 `@rollup/plugin-alias`： 打包构建时，将导入路径的包的别名替换为真实的包路径
-
-```
-
-```
 
 ## 调度系统
 
