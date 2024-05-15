@@ -271,6 +271,7 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
 		prepareFreshStack(root, lane);
 	}
 
+	// workLoop如果出错，就会将workInProgress置为null，下一次循环时，由于wip为null, workLoop什么都不做，while循环break掉
 	do {
 		try {
 			shouldTimeSlice ? workLoopConcurrent() : workLoopSync();
