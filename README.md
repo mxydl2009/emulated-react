@@ -588,15 +588,36 @@ React内部组件命中bailout策略时，仍然会进一步遍历子孙节点�
 
 命中bailout策略的组件不需要重新render，其子节点结构用上一次render的子节点结构即可。
 
+通过命中bailout策略，可以减少子节点的diff算法。
+
 组件通过render函数的执行，获得其children子节点结构。减少render函数的执行，子节点们都复用原来的子节点。但是子节点的渲染函数可能还会调用，因为子节点需要获得子孙节点。
+
+如何命中bailout策略
+
+- props不变: 通过全等比较(直接比较props的引用)，除非用了React.memo后用浅比较
+- state不变: 1. 没有state 2. 存在update更新，但更新前后state值不变
+- context不变
+- type不变
 
 对开发者的启示:
 
 - 分离状态: render函数中能抽离状态就抽离状态，将动与静分离.
 
+#### 相关API
+
+React.memo: 高阶组件，包裹传入的组件，将props的全等比较转换为浅比较，从而让传入的组件可以命中bailout策略
+
+useCallback: 缓存函数的引用，从而在多次渲染中对函数保持同一个引用，有利于命中bailout策略
+
+useMemo: 缓存函数调用的结果的引用，从而在多次渲染中对函数调用结果保持同一个引用，有利于命中bailout策略
+
 ### eagerState策略
 
 触发的更新经过计算后状态前后一致，没必要调度新的更新。
+
+产生更新后，在调度之前计算state。
+
+eagerState策略的前提是当前fiber没有其他更新，只有刚产生的更新，这样才会尝试eagerState策略
 
 ## 常见问题记录
 
