@@ -619,6 +619,71 @@ useMemo: 缓存函数调用的结果的引用，从而在多次渲染中对函�
 
 eagerState策略的前提是当前fiber没有其他更新，只有刚产生的更新，这样才会尝试eagerState策略
 
+### React.lazy使用
+
+```js
+React.lazy(load: () => Promise<{default: () => ReactElementType}>)
+```
+
+load函数: load函数调用的返回值是一个Promise(或者Thenable对象), 其resolve的值要有一个**default属性**，属性值应该是一个**返回jsx的函数**
+
+- webpack提供的动态导入import()函数resolve的值就是一个包含了default属性的对象。
+
+返回值: LazyComponent
+
+```js
+  const lazyType: LazyComponent<T, Payload<T>> = {
+    $$typeof: REACT_LAZY_TYPE,
+		// payload即为要解析的组件
+    _payload: payload,
+		// 解析payload
+    _init: lazyInitializer,
+  };
+```
+
+#### lazy用法
+
+```js
+function Child(props) {
+	return <Comp {...props} />;
+}
+
+// 用法1
+const ChildCom = lazy(() => {
+	return getSomeData().then((data) => {
+		return { default: Child };
+	});
+});
+
+// 用法2
+const ChildCom = lazy(() => {
+	return getSomeData().then((data) => {
+		return { default: () => <Child data={data} /> };
+	});
+});
+
+// 用法3
+const ChildCom = lazy(() => import(`${Child}的引用地址`));
+
+function App() {
+	return (
+		<div>
+			<Comp />
+		</div>
+	);
+}
+```
+
+#### 与Suspense配合的原理
+
+1. 首次渲染过程中，当解析到LazyComponent时，会调用lazyInitializer函数（内部会调用load函数，此时payload状态为pending，result为load函数的返回值（Promise），并为该Promise调度了微任务），最后lazyInitializer函数抛出错误。
+
+2. React catch到错误后，由Suspense处理，显示fallback;
+
+3. 当Promise resolve后，调度的微任务会给payload状态置为Resolved, 并将结果存储与payload的result中;
+
+4. Suspense接着处理: pingSuspendedRoot函数会再次调度渲染工作，再次解析到LazyComponent时，调用lazyInitializer函数会返回payload的result结果的default属性，即一个返回jsx的函数（即函数组件），然后按照函数组件的渲染方式继续即可。
+
 ## 常见问题记录
 
 Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？
