@@ -524,6 +524,84 @@ Lane模型
 
 在这一基本思路基础上，可以做一些优化：实际上，在消耗高优先级更新时，也是按照顺序消耗，只是遇到第一个要跳过的更新时，将此时计算得到的state值赋予baseState，并且将该更新保存到baseQueue。下一次消耗低优先级的更新时，就可以从第一个要跳过的更新baseQueue和此时的baseState开始计算，节省了计算成本。
 
+### Scheduler源码解析
+
+#### 最小堆
+
+taskQueue的数据结构是最小堆(minHeap)；
+
+二叉堆（binary heap）是一种特殊的堆，二叉堆是完全二叉树或者是近似完全二叉树。
+
+二叉堆满足堆特性：父节点的键值总是保持固定的序关系于任何一个子节点的键值，且每个节点的左子树和右子树都是一个二叉堆。
+
+- 当父节点的键值总是大于或等于任何一个子节点的键值时为“最大堆”（max heap）。
+
+- 当父节点的键值总是小于或等于任何一个子节点的键值时为“最小堆”（min heap）。
+
+##### 方法
+
+- push，往最小堆插入新节点，自动调整堆的结构
+- pop，删除根节点，就是那个最小的值, 也就是优先级最高的任务
+- siftUp，上浮，不停地交换节点和父节点
+- shiftDown，下沉，不停地交换节点和子节点
+- peek，获取根节点，也就是数组的第一个元素，也就是优先级最高的那个任务
+
+全局变量:
+
+- taskQueue: 存储调度的任务队列
+- startTime: 判断时间切片是否需要yield
+- isMessageLoopRunning: 标识是否正在执行任务。在requestHostCallback中标为true，开始执行任务。所有任务执行完则标为false。
+- isPerformingWork：标识是否正在执行task.callback回调。每次执行完都会重置为false，每次开始执行前都置为true。
+
+函数:
+
+- shouldYieldToHost: 在workLoop中调用，判断应不应该停止，停止则跳出循环，JavaScript没有函数待执行，执行权交给浏览器; 否则继续执行任务；
+
+```js
+let frameInterval = 5; // 默认为5ms, 根据当前宿主环境的帧率更新该值
+const timeElapsed = getCurrentTime() - startTime;
+if (timeElapsed < frameInterval) {
+	// 还有时间执行任务
+	return false;
+}
+// Yield now.
+return true;
+```
+
+- scheduleCallback：传入callback函数，创建task任务，入队taskQueue，返回task。
+  task任务包含如下重要的指标
+  - 开始时间startTime: 即scheduleCallback函数执行的当前时间
+  - 过期时间expirationTime: 过期时间，`startTime + timeout`，timeout是根据任务的优先级赋值的，比如UserBlockingPriority的timeout就是250ms
+  - sortIndex: 排序依据的字段, 非手动的延迟的任务是expirationTime，手动传入delay的任务是startTime
+  - callback: 任务对应的回调函数，接收该任务是否过期的标示`didUserCallbackTimeout = currentTask.expirationTime <= currentTime;`, callback调用时如果当前时间大于等于过期时间，表示该任务已经过期，需要使用Immediate的优先级（React是SyncLane）来执行
+- requestHostCallback: 调用schedulePerformWorkUntilDeadline函数
+- schedulePerformWorkUntilDeadline: 基于宿主环境原生任务调度API来调度PerformWorkUntilDeadline的执行
+  宿主环境原生任务调度API: 在每一帧浏览器重绘后执行回调函数（越早执行越好）。以下的API按顺序排序
+  - setImmediate: 针对node.js和IE
+  - MessageChannel: 大多数浏览器都支持
+  - setTimeout: 不建议，因为setTimeout调度的回调在每一帧执行时会浪费4ms，因为setTimeout最小精度是4ms
+- PerformWorkUntilDeadline: 调用flushWork来循环执行task，会将当前时间传给flushWork
+- flushWork: 将当前时间传给workLoop调用
+- workLoop: 循环地从任务队列里获取任务(过期时间最短的任务)，然后执行callback函数
+  - 任务过期时间大于当前时间，且shouldYield返回true，则break；
+  - 执行callback函数，并且更新当前时间。如果callback函数返回值为函数，则将返回的函数作为task.callback属性。
+  - 如果callback返回值为函数，则workLoop返回true（说明当前task还有工作要做，下一帧继续），由schedulePerformWorkUntilDeadline继续调度.
+  - 如果task执行完成或者出错，总之task.callback没有返回函数，则从taskQueue中删除该任务，继续获取新任务。如果有新任务，返回true，调度下一帧执行新任务；如果没有，从timerQueue中获取任务进行调度，然后返回false。
+  ```js
+  const continuationCallback = callback(didUserCallbackTimeout);
+  currentTime = getCurrentTime(); // 更新当前时间
+  if (typeof continuationCallback === 'function') {
+  	// If a continuation is returned, immediately yield to the main thread
+  	// regardless of how much time is left in the current time slice.
+  	// $FlowFixMe[incompatible-use] found when upgrading Flow
+  	// 返回函数作为当前任务的callback属性
+  	currentTask.callback = continuationCallback;
+  	// 暂时不解释advanceTimers
+  	advanceTimers(currentTime);
+  	return true;
+  }
+  ```
+
 ### useTransition
 
 ```js
