@@ -33,3 +33,50 @@ export type ReactContext<T> = {
 };
 
 export type Action<State> = State | ((prevState: State) => State);
+
+export type Usable<T> = Thenable<T> | ReactContext<T>;
+
+// Thenable 内部status： untracked -> pending -> fulfilled -> rejected
+// export type Thenable<T>
+export interface ThenableImpl<T, Result, Err> {
+	then(
+		onFulfilled: (value: T) => Result,
+		onRejected?: (reason: Err) => Result
+	): void | Weakable<Result>;
+}
+
+export interface UntrackedThenable<T, Result, Err>
+	extends ThenableImpl<T, Result, Err> {
+	status?: string;
+}
+
+export interface PendingThenable<T, Result, Err>
+	extends ThenableImpl<T, Result, Err> {
+	status?: string;
+}
+
+export interface FulfilledThenable<T, Result, Err>
+	extends ThenableImpl<T, Result, Err> {
+	status?: string;
+	value: T;
+}
+export interface RejectedThenable<T, Result, Err>
+	extends ThenableImpl<T, Result, Err> {
+	status?: string;
+	reason: Err;
+}
+
+export type Thenable<T, Result = void, Err = any> =
+	| UntrackedThenable<T, Result, Err>
+	| PendingThenable<T, Result, Err>
+	| FulfilledThenable<T, Result, Err>
+	| RejectedThenable<T, Result, Err>;
+
+// Thenable 内部status： untracked -> pending -> fulfilled -> rejected
+// export type Thenable<T>
+export interface Weakable<Result> {
+	then(
+		onFulfilled: () => Result,
+		onRejected?: () => Result
+	): void | Weakable<Result>;
+}

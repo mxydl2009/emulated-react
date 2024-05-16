@@ -9,11 +9,13 @@ import {
 	enqueueUpdate,
 	processUpdateQueue
 } from './updateQueue';
-import { Action, ReactContext } from 'shared/ReactTypes';
+import { Action, ReactContext, Thenable, Usable } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
 import { Lane, requestUpdateLane } from './fiberLanes';
 import { Passive, HookHasEffect } from './hookEffectTags';
 import { Flags, PassiveEffect } from './fiberFlags';
+import { REACT_CONTEXT_TYPE } from 'shared/ReactSymbols';
+import { trackUsedThenable } from './thenable';
 
 // 记录当前正在渲染的fiber节点，用于在Hook执行中保存Hook的数据，在渲染完成后，需要重置为null，从而
 // 继续记录下一个fiber节点的Hook数据
@@ -91,7 +93,8 @@ const HooksDispatcherOnMount: Dispatcher = {
 	useEffect: mountEffect,
 	useTransition: mountTransition,
 	useRef: mountRef,
-	useContext: readContext
+	useContext: readContext,
+	use
 };
 
 // 定义update阶段的Hooks集合
@@ -101,7 +104,8 @@ const HooksDispatcherOnUpdate: Dispatcher = {
 	useEffect: updateEffect,
 	useTransition: updateTransition,
 	useRef: updateRef,
-	useContext: readContext
+	useContext: readContext,
+	use
 };
 
 function mountState<State>(
@@ -338,6 +342,22 @@ function readContext<T>(context: ReactContext<T>): T {
 	}
 	const value = context._currentValue;
 	return value;
+}
+
+// use hook, 可以接收Thenable(理解为Promise也可以)的内部值或者Context的值
+function use<T>(usable: Usable<T>): T {
+	if (usable !== null && typeof usable === 'object') {
+		if (typeof (usable as Thenable<T>).then === 'function') {
+			// thenable类型
+			const thenable = usable as Thenable<T>;
+			return trackUsedThenable(thenable);
+		} else if ((usable as ReactContext<T>).$$typeof === REACT_CONTEXT_TYPE) {
+			// Context类型
+			const context = usable as ReactContext<T>;
+			return readContext(context);
+		}
+	}
+	throw new Error('不支持的use hook 参数' + usable);
 }
 /**
  * 创建更新，将更新入队，从当前fiber节点调度更新

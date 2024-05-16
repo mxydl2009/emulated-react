@@ -1,4 +1,4 @@
-import { Action, ReactContext } from 'shared/ReactTypes';
+import { Action, ReactContext, Usable } from 'shared/ReactTypes';
 
 // Dispatcher是所有的Hooks集合，在源码里，hook都是dispatch函数
 export interface Dispatcher {
@@ -7,6 +7,7 @@ export interface Dispatcher {
 	useTransition: () => [boolean, () => void];
 	useRef: <T>(initialValue: T) => { current: T };
 	useContext: <T>(context: ReactContext<T>) => T;
+	use: <T>(usable: Usable<T>) => T;
 }
 
 export type Dispatch<T> = (action: Action<T>) => void;
