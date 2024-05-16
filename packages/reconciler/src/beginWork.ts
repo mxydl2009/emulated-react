@@ -20,8 +20,15 @@ import {
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
 import { Lane } from './fiberLanes';
-import { ChildDeletion, Placement, Ref } from './fiberFlags';
+import {
+	ChildDeletion,
+	DidCapture,
+	NoFlags,
+	Placement,
+	Ref
+} from './fiberFlags';
 import { pushProvider } from './fiberContext';
+import { pushSuspenseHandler } from './suspenseContext';
 
 /**
  * 构造fiberNode的children，返回子FiberNode
@@ -152,14 +159,17 @@ function updateSuspenseComponent(wip: FiberNode) {
 
 	let showFallback = false;
 
-	const didSuspense = false;
+	const didSuspense = (wip.flags & DidCapture) !== NoFlags;
 
 	if (didSuspense) {
 		showFallback = true;
+		wip.flags &= ~DidCapture;
 	}
 
 	const nextPrimaryChildren = nextProps.children;
 	const nextFallbackChildren = nextProps.fallback;
+
+	pushSuspenseHandler(wip);
 
 	if (current === null) {
 		// mount

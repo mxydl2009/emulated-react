@@ -7,7 +7,7 @@ import {
 	SuspenseComponent,
 	OffscreenComponent
 } from './workTag';
-import { Props, Key, Ref, ReactElementType } from 'shared/ReactTypes';
+import { Props, Key, Ref, ReactElementType, Weakable } from 'shared/ReactTypes';
 import { Flags, NoFlags } from './fiberFlags';
 import { ContainerType } from 'hostConfig';
 import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
@@ -109,6 +109,9 @@ export class FiberRootNode {
 	callbackNode: CallbackNode | null;
 	callbackPriority: Lane;
 
+	// 处理weakable的缓存，相同的weakable只需要触发一次更新
+	pingCache: WeakMap<Weakable<any>, Set<Lane>>;
+
 	constructor(container: ContainerType, hostRootFiber: FiberNode) {
 		this.container = container;
 		this.current = hostRootFiber;
@@ -122,6 +125,7 @@ export class FiberRootNode {
 		};
 		this.callbackNode = null;
 		this.callbackPriority = NoLane;
+		this.pingCache = null;
 	}
 }
 

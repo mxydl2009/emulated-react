@@ -12,5 +12,7 @@ export const MutationMask = Placement | Update | ChildDeletion;
 export const LayoutMask = Ref;
 
 export const Visibility = 0b00100000; // 需要调整取消display: none
+export const ShouldCapture = 0b01000000; // render阶段捕获到错误
+export const DidCapture = 0b10000000; // render阶段捕获到错误
 
 export const PassiveMask = PassiveEffect | ChildDeletion; // 本次更新需要触发create回调/destroy回调

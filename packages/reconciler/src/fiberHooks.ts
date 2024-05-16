@@ -456,3 +456,10 @@ function updateWorkInProgressHook(): Hook {
 
 	return workInProgressHook;
 }
+
+export function resetHooksOnUnwind() {
+	// unwind是局部重新渲染，需要重置当前fiber节点的全局变量
+	currentlyRenderingFiber = null;
+	currentHook = null;
+	workInProgressHook = null;
+}

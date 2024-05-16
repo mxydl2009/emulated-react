@@ -17,6 +17,7 @@ import {
 import { NoFlags, Ref, Update, Visibility } from './fiberFlags';
 import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
 import { popProvider } from './fiberContext';
+import { popSuspenseHandler } from './suspenseContext';
 
 /**
  * 将子节点的实例挂载到父实例上
@@ -52,6 +53,7 @@ export const completeWork = (wip: FiberNode) => {
 			bubbleProperties(wip);
 			return null;
 		case SuspenseComponent:
+			popSuspenseHandler();
 			const OffscreenFiber = wip.child;
 			const currentOffscreenFiber = OffscreenFiber.alternate;
 			const isHidden =

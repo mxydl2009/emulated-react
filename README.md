@@ -670,6 +670,16 @@ Suspense挂起时渲染fallback，非挂起时渲染传入的children，为了�
 
 Suspense的child指向Offscreen，只是beginWork中，在挂起时返回Fragment，非挂起时返回Offscreen。
 
+### 触发挂起
+
+在渲染组件时，遇到LazyComponent类型或者组件内有`use hook`，就会触发挂起更新，重新去渲染挂起流程。当异步任务返回数据被Resolve后，再次调度更新，重新渲染非挂起流程。Suspense涉及到了unwind流程。
+
+#### unwind流程
+
+beginWork：从上到下深度优先遍历
+completeWork: 从下到上深度优先遍历
+unwind：向上遍历到Suspense节点，再次beginWork -> completeWork
+
 ## 性能优化
 
 减少不必要的render函数执行，提高性能。
