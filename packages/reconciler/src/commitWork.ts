@@ -3,8 +3,12 @@ import {
 	Instance,
 	appendChildToContainer,
 	commitUpdate,
+	hideInstance,
+	hideTextInstance,
 	insertChildToContainer,
-	removeChild
+	removeChild,
+	unhideInstance,
+	unhideTextInstance
 } from 'hostConfig';
 import {
 	ChildDeletion,
@@ -15,14 +19,21 @@ import {
 	PassiveEffect,
 	Placement,
 	Ref,
-	Update
+	Update,
+	Visibility
 } from './fiberFlags';
-import { FiberNode, FiberRootNode, PendingPassiveEffects } from './fiberNode';
+import {
+	FiberNode,
+	FiberRootNode,
+	OffscreenProps,
+	PendingPassiveEffects
+} from './fiberNode';
 import {
 	FunctionComponent,
 	HostComponent,
 	HostRoot,
-	HostText
+	HostText,
+	OffscreenComponent
 } from './workTag';
 import { Effect, FCUpdateQueue } from './fiberHooks';
 import { HookHasEffect } from './hookEffectTags';
@@ -135,6 +146,94 @@ function commitMutationEffectsOnFiber(
 	}
 	if ((flags & Ref) !== NoFlags && finishedWork.tag === HostComponent) {
 		safelyDetachRef(finishedWork);
+	}
+
+	if (
+		(flags & Visibility) !== NoFlags &&
+		finishedWork.tag === OffscreenComponent
+	) {
+		const isHidden =
+			(finishedWork.pendingProps as OffscreenProps).mode === 'hidden';
+		hideOrUnhideAllChildren(finishedWork, isHidden);
+		finishedWork.flags &= ~Visibility;
+	}
+}
+
+function hideOrUnhideAllChildren(finishedWork: FiberNode, isHidden: boolean) {
+	findHostSubtreeRoot(finishedWork, (hostRoot) => {
+		const instance = hostRoot.stateNode;
+		if (hostRoot.tag === HostComponent) {
+			isHidden ? hideInstance(instance) : unhideInstance(instance);
+		} else if (hostRoot.tag === HostText) {
+			isHidden
+				? hideTextInstance(hostRoot.stateNode)
+				: unhideTextInstance(
+						hostRoot.stateNode,
+						String(hostRoot.pendingProps.content)
+					);
+		}
+	});
+}
+// 找到OffscreenComponent的所有子根host节点，即子节点的根节点中为hostComponent的节点，要为这些节点添加或者移除display: none
+// 主要是面对类似以下jsx结构: div和world节点都是子根host节点
+// ```jsx
+// <Suspense>
+//   <Comp />
+// 	<div>
+// 	  <p>hello</p>
+// 	</div>
+// 	world
+// </Suspense>
+// ```
+function findHostSubtreeRoot(
+	finishedWork: FiberNode,
+	callback: (hostSubtreeRoot) => void
+) {
+	let node = finishedWork;
+	// 存储子根host节点
+	let hostSubtreeRoot = null;
+	while (true) {
+		if (node.tag === HostComponent) {
+			if (hostSubtreeRoot === null) {
+				hostSubtreeRoot = node;
+				callback(hostSubtreeRoot);
+			}
+		} else if (node.tag === HostText) {
+			// HostText需要清除文本内容
+			if (hostSubtreeRoot === null) {
+				callback(node);
+			}
+		} else if (
+			node.tag === OffscreenComponent &&
+			(node.pendingProps as OffscreenProps).mode === 'hidden' &&
+			node !== finishedWork
+		) {
+			// Suspense里嵌套了子Suspense，不用处理，由内部的子Suspense处理
+		} else if (node.child !== null) {
+			node.child.return = node;
+			node = node.child;
+			continue;
+		}
+		if (node === finishedWork) return;
+
+		while (node.sibling === null) {
+			if (node.return === null || node.return === finishedWork) {
+				return;
+			}
+
+			if (hostSubtreeRoot === node) {
+				hostSubtreeRoot = null;
+			}
+
+			node = node.return;
+		}
+
+		if (hostSubtreeRoot === node) {
+			hostSubtreeRoot = null;
+		}
+
+		node.sibling.return = node.return;
+		node = node.sibling;
 	}
 }
 

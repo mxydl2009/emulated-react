@@ -1,5 +1,11 @@
 import { ReactElementType } from 'shared/ReactTypes';
-import { FiberNode } from './fiberNode';
+import {
+	FiberNode,
+	OffscreenProps,
+	createFiberFromFragment,
+	createFiberFromOffscreen,
+	createWorkInProgress
+} from './fiberNode';
 import { UpdateQueue, processUpdateQueue } from './updateQueue';
 import {
 	FunctionComponent,
@@ -7,12 +13,14 @@ import {
 	HostRoot,
 	HostText,
 	Fragment,
-	ContextProvider
+	ContextProvider,
+	SuspenseComponent,
+	OffscreenComponent
 } from './workTag';
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
 import { Lane } from './fiberLanes';
-import { Ref } from './fiberFlags';
+import { ChildDeletion, Placement, Ref } from './fiberFlags';
 import { pushProvider } from './fiberContext';
 
 /**
@@ -34,6 +42,10 @@ export const beginWork = (wip: FiberNode, renderLane: Lane) => {
 			return updateFragment(wip);
 		case ContextProvider:
 			return updateContextProvider(wip);
+		case SuspenseComponent:
+			return updateSuspenseComponent(wip);
+		case OffscreenComponent:
+			return updateOffscreenComponent(wip);
 		case HostText:
 			return null;
 		default:
@@ -125,4 +137,167 @@ function markRef(current: FiberNode | null, workInProgress: FiberNode) {
 	) {
 		workInProgress.flags |= Ref;
 	}
+}
+
+function updateOffscreenComponent(wip: FiberNode) {
+	const nextProps = wip.pendingProps;
+	const nextChildren = nextProps.children;
+	reconcileChildren(wip, nextChildren);
+	return wip.child;
+}
+
+function updateSuspenseComponent(wip: FiberNode) {
+	const current = wip.alternate;
+	const nextProps = wip.pendingProps;
+
+	let showFallback = false;
+
+	const didSuspense = false;
+
+	if (didSuspense) {
+		showFallback = true;
+	}
+
+	const nextPrimaryChildren = nextProps.children;
+	const nextFallbackChildren = nextProps.fallback;
+
+	if (current === null) {
+		// mount
+		if (showFallback) {
+			// 挂起
+			return mountSuspenseFallbackChildren(
+				wip,
+				nextPrimaryChildren,
+				nextFallbackChildren
+			);
+		} else {
+			// 非挂起
+			return mountSuspensePrimaryChildren(wip, nextPrimaryChildren);
+		}
+	} else {
+		// update
+		if (showFallback) {
+			// 挂起
+			return updateSuspenseFallbackChildren(
+				wip,
+				nextPrimaryChildren,
+				nextFallbackChildren
+			);
+		} else {
+			// 非挂起
+			return updateSuspensePrimaryChildren(wip, nextPrimaryChildren);
+		}
+	}
+}
+
+// 挂载时，应该先走非挂起的流程，非挂起流程报错后，再走挂起流程，此时要显示fallback的情况，Offscreen节点和Fragment节点都要创建
+function mountSuspenseFallbackChildren(
+	wip: FiberNode,
+	primaryChildren: any,
+	fallbackChildren: any
+) {
+	// 创建离屏的节点，承载primaryChildren
+	const primaryChildProps: OffscreenProps = {
+		mode: 'hidden',
+		children: primaryChildren
+	};
+	// 创建离屏的节点，承载primaryChildren
+	const primaryChildFragment = createFiberFromOffscreen(primaryChildProps);
+	// 创建fallback的容器Fragment
+	const fallbackChildFragment = createFiberFromFragment(fallbackChildren, null);
+
+	// TODO:个人感觉似乎没必要给fallback添加挂载副作用吧，mount时挂载都是appendChildren来进行
+	fallbackChildFragment.flags |= Placement;
+
+	primaryChildFragment.return = wip;
+	fallbackChildFragment.return = wip;
+	primaryChildFragment.sibling = fallbackChildFragment;
+	wip.child = primaryChildFragment;
+
+	return fallbackChildFragment;
+}
+// 挂载时，走非挂起的流程
+function mountSuspensePrimaryChildren(wip: FiberNode, primaryChildren: any) {
+	// 创建离屏的节点，承载primaryChildren
+	const primaryChildProps: OffscreenProps = {
+		mode: 'visible',
+		children: primaryChildren
+	};
+	// 创建离屏的节点，承载primaryChildren，不需要创建fallback，因为未必需要用到fallback
+	const primaryChildFragment = createFiberFromOffscreen(primaryChildProps);
+	primaryChildFragment.return = wip;
+	wip.child = primaryChildFragment;
+	return primaryChildFragment;
+}
+
+function updateSuspenseFallbackChildren(
+	wip: FiberNode,
+	primaryChildren: any,
+	fallbackChildren: any
+) {
+	const current = wip.alternate;
+	const currentPrimaryChildFragment = current.child as FiberNode;
+	const currentFallbackChildFragment: FiberNode | null = current.child.sibling;
+	// 创建离屏的节点，承载primaryChildren
+	const primaryChildProps: OffscreenProps = {
+		mode: 'hidden',
+		children: primaryChildren
+	};
+	// 创建离屏的节点，承载primaryChildren
+	const primaryChildFragment = createWorkInProgress(
+		currentPrimaryChildFragment,
+		primaryChildProps
+	);
+	let fallbackChildFragment = null;
+	// 创建fallback的容器Fragment
+	if (currentFallbackChildFragment === null) {
+		fallbackChildFragment = createWorkInProgress(
+			currentFallbackChildFragment,
+			fallbackChildren
+		);
+	} else {
+		fallbackChildFragment = createFiberFromFragment(
+			fallbackChildren,
+			fallbackChildren
+		);
+		// TODO:个人感觉似乎没必要给fallback添加挂载副作用吧，mount时挂载都是appendChildren来进行
+		fallbackChildFragment.flags |= Placement;
+	}
+
+	primaryChildFragment.return = wip;
+	fallbackChildFragment.return = wip;
+	primaryChildFragment.sibling = fallbackChildFragment;
+	wip.child = primaryChildFragment;
+
+	return fallbackChildFragment;
+}
+// 更新时，走非挂起的流程
+function updateSuspensePrimaryChildren(wip: FiberNode, primaryChildren: any) {
+	// 创建离屏的节点，承载primaryChildren
+	const primaryChildProps: OffscreenProps = {
+		mode: 'visible',
+		children: primaryChildren
+	};
+	const current = wip.alternate;
+	const currentPrimaryChildFragment = current.child as FiberNode;
+	const currentFallbackChildFragment = current.child.sibling;
+	// 创建离屏的节点，承载primaryChildren，不需要创建fallback，因为未必需要用到fallback
+	const primaryChildFragment = createWorkInProgress(
+		currentPrimaryChildFragment,
+		primaryChildProps
+	);
+	primaryChildFragment.return = wip;
+	primaryChildFragment.sibling = null;
+	wip.child = primaryChildFragment;
+
+	if (currentFallbackChildFragment !== null) {
+		const deletions = wip.deletions;
+		if (deletions === null) {
+			wip.deletions = [currentFallbackChildFragment];
+			wip.flags |= ChildDeletion;
+		} else {
+			deletions.push(currentFallbackChildFragment);
+		}
+	}
+	return primaryChildFragment;
 }

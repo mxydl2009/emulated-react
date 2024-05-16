@@ -4,16 +4,17 @@ import {
 	createInstance,
 	createTextInstance
 } from 'hostConfig';
-import { FiberNode } from './fiberNode';
+import { FiberNode, OffscreenProps } from './fiberNode';
 import {
 	FunctionComponent,
 	HostComponent,
 	HostRoot,
 	HostText,
 	Fragment,
-	ContextProvider
+	ContextProvider,
+	SuspenseComponent
 } from './workTag';
-import { NoFlags, Ref, Update } from './fiberFlags';
+import { NoFlags, Ref, Update, Visibility } from './fiberFlags';
 import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
 import { popProvider } from './fiberContext';
 
@@ -50,6 +51,30 @@ export const completeWork = (wip: FiberNode) => {
 			popProvider(wip.type._context);
 			bubbleProperties(wip);
 			return null;
+		case SuspenseComponent:
+			const OffscreenFiber = wip.child;
+			const currentOffscreenFiber = OffscreenFiber.alternate;
+			const isHidden =
+				(OffscreenFiber.pendingProps as OffscreenProps).mode === 'hidden';
+			if (currentOffscreenFiber !== null) {
+				// update
+				const wasHidden =
+					(currentOffscreenFiber.pendingProps as OffscreenProps).mode ===
+					'hidden';
+				if (isHidden !== wasHidden) {
+					OffscreenFiber.flags |= Visibility;
+					bubbleProperties(OffscreenFiber);
+				}
+			} else {
+				// mount
+				if (isHidden) {
+					OffscreenFiber.flags |= Visibility;
+					bubbleProperties(OffscreenFiber);
+				}
+			}
+			bubbleProperties(OffscreenFiber);
+			return null;
+
 		case HostText:
 			if (current !== null && wip.stateNode) {
 				// update

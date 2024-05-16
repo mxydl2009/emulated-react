@@ -658,6 +658,18 @@ bailout优化策略：如果组件的shouldComponentUpdate返回true，表示组
 
 React内部组件命中bailout策略时，仍然会进一步遍历子孙节点，检查是否有订阅Context。如果有订阅，那么就会沿父节点依次递归返回并标记沿途父节点为有Context订阅，这样即便命中bailout策略时，也会beginWork去渲染，从而避免非预期的渲染发生。
 
+## Suspense
+
+### 基本原理
+
+Suspense挂起时渲染fallback，非挂起时渲染传入的children，为了提高性能，而不是频繁删除节点和创建节点，fallback和children都渲染，只是在挂起时所有children的display为none，在非挂起时fallback的display为none, 保证fiber树中fallback和children同时存在（从而保持了节点和节点的状态），只是切换display的属性值。
+
+### 改进
+
+基本原理有个问题，children有可能会很多，遍历children设置display: none会很好性能。因此，将children置于一个父节点Offscreen下，而Offscreen再置于Suspense下，同样，fallback也添加一个中间节点Fragment，这样性能会更好，也会更简单一点。
+
+Suspense的child指向Offscreen，只是beginWork中，在挂起时返回Fragment，非挂起时返回Offscreen。
+
 ## 性能优化
 
 减少不必要的render函数执行，提高性能。

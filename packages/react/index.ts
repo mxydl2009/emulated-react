@@ -1,4 +1,8 @@
-import { jsxDEV, Fragment as _Fragment } from './src/jsx';
+import {
+	jsxDEV,
+	Fragment as _Fragment,
+	Suspense as _Suspense
+} from './src/jsx';
 import {
 	Dispatcher,
 	resolveDispatcher,
@@ -47,3 +51,4 @@ export const __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
 export const version = '18.1.0';
 export const createElement = jsxDEV;
 export const Fragment = _Fragment;
+export const Suspense = _Suspense;

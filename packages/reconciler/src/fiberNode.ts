@@ -3,7 +3,9 @@ import {
 	WorkTag,
 	HostComponent,
 	Fragment,
-	ContextProvider
+	ContextProvider,
+	SuspenseComponent,
+	OffscreenComponent
 } from './workTag';
 import { Props, Key, Ref, ReactElementType } from 'shared/ReactTypes';
 import { Flags, NoFlags } from './fiberFlags';
@@ -12,13 +14,18 @@ import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
 import { Effect } from './fiberHooks';
 // import { UpdateQueue } from './updateQueue';
 import { CallbackNode } from 'scheduler';
-import { REACT_PROVIDER_TYPE } from 'shared/ReactSymbols';
+import { REACT_PROVIDER_TYPE, REACT_SUSPENSE_TYPE } from 'shared/ReactSymbols';
 
 export interface PendingPassiveEffects {
 	// 收集卸载时的destroy回调
 	unmount: Effect[];
 	// 收集更新时的create回调
 	update: Effect[];
+}
+
+export interface OffscreenProps {
+	mode: 'hidden' | 'visible';
+	children: any;
 }
 
 // FiberNode既作为数据存储的单元，也作为工作单元
@@ -165,6 +172,11 @@ export function createFiberFromElement(element: ReactElementType) {
 		type.$$typeof === REACT_PROVIDER_TYPE
 	) {
 		fiberTag = ContextProvider;
+	} else if (
+		typeof type === 'object' &&
+		type.$$typeof === REACT_SUSPENSE_TYPE
+	) {
+		fiberTag = SuspenseComponent;
 	} else if (typeof type !== 'function') {
 		if (__DEV__) {
 			console.warn('unKnown type.');
@@ -179,5 +191,10 @@ export function createFiberFromElement(element: ReactElementType) {
 
 export function createFiberFromFragment(element: ReactElementType, key: Key) {
 	const fiber = new FiberNode(Fragment, element.props, key);
+	return fiber;
+}
+
+export function createFiberFromOffscreen(pendingProps: OffscreenProps) {
+	const fiber = new FiberNode(OffscreenComponent, pendingProps, null);
 	return fiber;
 }

@@ -8,6 +8,7 @@ export interface Props {
 	children?: Array<ReactElementType> | undefined | ReactElementType;
 	content?: string | number;
 	value?: any;
+	fallback?: ReactElementType;
 }
 export type ElementType = string | REACT_FRAGMENT_TYPE | ReactProviderType<any>;
 

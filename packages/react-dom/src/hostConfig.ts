@@ -73,3 +73,21 @@ export const scheduleMicroTask = (function () {
 	}
 	return setTimeout;
 })();
+
+export function hideInstance(instance: Instance) {
+	const style = (instance as HTMLElement).style;
+	style.setProperty('display', 'none', 'important');
+}
+
+export function unhideInstance(instance: Instance) {
+	const style = (instance as HTMLElement).style;
+	style.display = '';
+}
+
+export function hideTextInstance(textInstance: Instance) {
+	textInstance.nodeValue = '';
+}
+
+export function unhideTextInstance(textInstance: Instance, content: string) {
+	textInstance.nodeValue = content;
+}

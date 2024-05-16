@@ -21,7 +21,8 @@ export default [
 			'no-case-declarations': 'error',
 			'no-constant-condition': 'off',
 			'typescript-eslint/ban-ts-comment': 'off',
-			'@typescript-eslint/no-explicit-any': 'off'
+			'@typescript-eslint/no-explicit-any': 'off',
+			'no-case-declarations': 'off'
 		}
 	}
 ];

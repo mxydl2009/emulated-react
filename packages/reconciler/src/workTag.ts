@@ -4,6 +4,8 @@ export const HostComponent = 5;
 export const HostText = 6;
 export const Fragment = 7;
 export const ContextProvider = 8;
+export const SuspenseComponent = 13;
+export const OffscreenComponent = 14;
 // TODO: typeof 操作符对常量的处理是该常量的值
 export type WorkTag =
 	| typeof FunctionComponent
@@ -11,4 +13,6 @@ export type WorkTag =
 	| typeof HostComponent
 	| typeof HostText
 	| typeof Fragment
-	| typeof ContextProvider;
+	| typeof ContextProvider
+	| typeof SuspenseComponent
+	| typeof OffscreenComponent;
