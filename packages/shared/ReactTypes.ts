@@ -53,6 +53,8 @@ export interface UntrackedThenable<T, Result, Err>
 export interface PendingThenable<T, Result, Err>
 	extends ThenableImpl<T, Result, Err> {
 	status?: string;
+	value: T | undefined;
+	reason: Err | undefined;
 }
 
 export interface FulfilledThenable<T, Result, Err>

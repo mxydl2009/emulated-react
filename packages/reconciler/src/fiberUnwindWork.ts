@@ -9,9 +9,10 @@ export function unwindWork(wip: FiberNode) {
 	switch (wip.tag) {
 		case SuspenseComponent:
 			popSuspenseHandler();
+			// 如果当前的Suspense节点包含了ShouldCapture，说明这个节点是要找的Suspense节点，去除ShouldCapture，添加DidCapture
 			if (
 				(flags & ShouldCapture) !== NoFlags &&
-				(flags & DidCapture) !== NoFlags
+				(flags & DidCapture) === NoFlags
 			) {
 				wip.flags = (wip.flags & ~ShouldCapture) | DidCapture;
 				return wip;

@@ -159,10 +159,12 @@ function updateSuspenseComponent(wip: FiberNode) {
 
 	let showFallback = false;
 
+	// 未挂起时disSuspense为false，挂起后经过unwind阶段，然后继续构建Suspense时，didSuspense为true
 	const didSuspense = (wip.flags & DidCapture) !== NoFlags;
 
 	if (didSuspense) {
 		showFallback = true;
+		// 去除DidCapture标识
 		wip.flags &= ~DidCapture;
 	}
 

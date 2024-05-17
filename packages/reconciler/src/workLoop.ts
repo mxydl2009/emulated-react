@@ -268,7 +268,7 @@ function performConcurrentWorkOnRoot(root: FiberRootNode, didTimeout: boolean) {
 		console.error('未实现的同步更新结束状态', exitStatus);
 	}
 }
-
+// 如果是更新插队造成新的渲染，则调用prepareFreshStack重新开启从root从上到下的渲染，如果非更新插队，则说明是更新被打断，不需要prepareFreshStack重置
 function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
 	if (__DEV__) {
 		console.log(
@@ -286,10 +286,11 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
 	do {
 		try {
 			if (wipSuspendedReason !== NotSuspended && workInProgress !== null) {
-				// 进入unwind
+				// 说明render过程中发生了Suspense挂起，需要进入unwind
 				const thrownValue = wipThrownValue;
 				wipSuspendedReason = NotSuspended;
 				wipThrownValue = null;
+				// 向上unwind，找到最近的Suspense节点后赋值给workInProgress，然后继续构建fiber树
 				throwAndUnwindWorkLoop(root, workInProgress, thrownValue, lane);
 			}
 			shouldTimeSlice ? workLoopConcurrent() : workLoopSync();
@@ -329,28 +330,38 @@ function throwAndUnwindWorkLoop(
 	root: FiberRootNode,
 	// 发生挂起错误的Fiber节点
 	unitOfWork: FiberNode,
+	// 挂起的thenable
 	thrownValue: any,
+	// 被挂起的lane
 	lane: Lane
 ) {
-	// 重置FC全局变量
+	// 重置FC全局变量，因为错误是在render阶段发生的，可能已经有Hook被调用，但没有执行完，如果不重置, 相关的Hook全局变量会导致Hook链表发生问题
 	resetHooksOnUnwind();
-	// 添加请求返回后重新触发更新的回调
+	// 给发生挂起的节点最近的Suspense组件添加ShouldCapture副作用标识
+	// 添加thrownValue的异步响应返回后重新触发更新的回调
 	throwException(root, thrownValue, lane);
-	// unwind
+	// unwind: 向上逐级查找Suspense节点，找到后将Suspense赋值为workInProgress，继续构建
 	unwindUnitOfWork(unitOfWork);
 }
-
+/**
+ *
+ * @param unitOfWork 发生挂起的节点
+ * @returns
+ */
 function unwindUnitOfWork(unitOfWork: FiberNode) {
 	let incompleteWork = unitOfWork;
 	do {
-		// 找最近的Suspense
+		// 判断当前incompleteWork是否是要找的Suspense(有ShouldCapture副作用标识的Suspense)，如果不是，返回null
 		const next = unwindWork(incompleteWork);
 		if (next !== null) {
+			// 找到了需要的Suspense节点，从该Suspense节点继续构建fiber树
 			workInProgress = next;
 			return;
 		}
+		// 不是要找到节点，继续向上查找
 		const returnFiber = incompleteWork.return as FiberNode;
 		if (returnFiber !== null) {
+			// 清除沿途的所有标识的副作用操作，因为向父节点沿途的这些节点本次渲染都不需要了
 			returnFiber.deletions = null;
 		}
 		incompleteWork = returnFiber;
@@ -362,6 +373,7 @@ function unwindUnitOfWork(unitOfWork: FiberNode) {
 function handleThrow(root: FiberRootNode, thrownValue: any) {
 	if (thrownValue === SuspenseException) {
 		thrownValue = getSuspendedThenable();
+		// 给全局变量赋值，告诉renderRoot方法在继续渲染前需要处理Suspense挂起的情况
 		wipSuspendedReason = SuspendedOnData;
 	}
 	wipThrownValue = thrownValue;

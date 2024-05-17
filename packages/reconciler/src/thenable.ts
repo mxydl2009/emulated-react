@@ -27,6 +27,9 @@ export function trackUsedThenable<T>(thenable: Thenable<T, void, any>) {
 		case 'fulfilled':
 			return (thenable as FulfilledThenable<T, void, any>).value;
 		case 'rejected':
+			// thenable通常情况下是Promise，所以可以给Promise实例添加catch方法来捕获错误，返回想要在错误下使用的值;
+			// 如果没有catch，则继续抛出错误，此时需要ErrorBoundary来捕获并展示其他UI;
+			// 如果添加了catch，而catch的onRejected函数未出错, 则为thenable会为fulfilled状态, onRejected的返回值为value
 			throw (thenable as RejectedThenable<T, void, any>).reason;
 		default:
 			if (typeof thenable.status === 'string') {
@@ -36,24 +39,21 @@ export function trackUsedThenable<T>(thenable: Thenable<T, void, any>) {
 				// untrack
 				const pending = thenable as unknown as PendingThenable<T, void, any>;
 				pending.status = 'pending';
-				// pending.value = undefined;
+				pending.value = undefined;
+				pending.reason = undefined;
 				pending.then(
 					(val) => {
 						if (pending.status === 'pending') {
-							const fulfilled: FulfilledThenable<T, void, any> = {
-								...pending,
-								value: val
-							};
+							const fulfilled: FulfilledThenable<T, void, any> = pending;
 							fulfilled.status = 'fulfilled';
+							fulfilled.value = val;
 						}
 					},
 					(err) => {
 						if (pending.status === 'pending') {
-							const rejected: RejectedThenable<T, void, any> = {
-								...pending,
-								reason: err
-							};
+							const rejected: RejectedThenable<T, void, any> = pending;
 							rejected.status = 'rejected';
+							rejected.reason = err;
 						}
 					}
 				);

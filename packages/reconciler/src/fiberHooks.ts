@@ -344,7 +344,7 @@ function readContext<T>(context: ReactContext<T>): T {
 	return value;
 }
 
-// use hook, 可以接收Thenable(理解为Promise也可以)的内部值或者Context的值
+// use hook, 可以接收Thenable(理解为Promise也可以)的内部值或者Context的值，第一次执行时对于Thenable会抛出Suspense类型的错误
 function use<T>(usable: Usable<T>): T {
 	if (usable !== null && typeof usable === 'object') {
 		if (typeof (usable as Thenable<T>).then === 'function') {
