@@ -10,6 +10,7 @@ import {
 } from './src/currentDispatcher';
 import { currentBatchConfig } from './src/currentBatchConfig';
 import { ReactContext, Usable } from 'shared/ReactTypes';
+import { createContext as _createContext } from './src/context';
 
 export const useState: Dispatcher['useState'] = (initialState: any) => {
 	// 获取当前的Dispatcher.useState, 需要去resolveDispatcher
@@ -57,3 +58,4 @@ export const version = '18.1.0';
 export const createElement = jsxDEV;
 export const Fragment = _Fragment;
 export const Suspense = _Suspense;
+export const createContext = _createContext;
