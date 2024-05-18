@@ -131,7 +131,7 @@ export class FiberRootNode {
 
 // 根据当前UI的fiber节点，创建一个新的fiber节点，即复用老的节点
 export const createWorkInProgress = (
-	// hostRootFiber节点
+	// 当前节点，根据当前节点复用产生新节点
 	current: FiberNode,
 	pendingProps: Props
 ): FiberNode => {
