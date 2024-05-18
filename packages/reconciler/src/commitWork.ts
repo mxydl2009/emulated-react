@@ -29,6 +29,7 @@ import {
 	PendingPassiveEffects
 } from './fiberNode';
 import {
+	Fragment,
 	FunctionComponent,
 	HostComponent,
 	HostRoot,
@@ -119,16 +120,6 @@ function commitMutationEffectsOnFiber(
 	root: FiberRootNode
 ) {
 	const flags = finishedWork.flags;
-	if ((flags & Placement) !== NoFlags) {
-		// 有Placement的副作用，则执行
-		commitPlacement(finishedWork);
-		finishedWork.flags &= ~Placement;
-	}
-	if ((flags & Update) !== NoFlags) {
-		// 有Update的副作用，则执行
-		commitUpdate(finishedWork);
-		finishedWork.flags &= ~Update;
-	}
 	if ((flags & ChildDeletion) !== NoFlags) {
 		const deletions = finishedWork.deletions;
 		if (deletions !== null) {
@@ -138,12 +129,26 @@ function commitMutationEffectsOnFiber(
 		}
 		finishedWork.flags &= ~ChildDeletion;
 	}
+
+	if ((flags & Placement) !== NoFlags) {
+		// 有Placement的副作用，则执行
+		commitPlacement(finishedWork);
+		finishedWork.flags &= ~Placement;
+	}
+
+	if ((flags & Update) !== NoFlags) {
+		// 有Update的副作用，则执行
+		commitUpdate(finishedWork);
+		finishedWork.flags &= ~Update;
+	}
+
 	if ((flags & PassiveEffect) !== NoFlags) {
 		// 有副作用，收集回调
 		// update类型包含了mount和update
 		commitPassiveEffects(finishedWork, root, 'update');
 		finishedWork.flags &= ~PassiveEffect;
 	}
+
 	if ((flags & Ref) !== NoFlags && finishedWork.tag === HostComponent) {
 		safelyDetachRef(finishedWork);
 	}
@@ -434,10 +439,10 @@ function insertOrAppendPlacementNodeIntoContainer(
 	}
 	const child = finishedWork.child;
 	if (child !== null) {
-		insertOrAppendPlacementNodeIntoContainer(child, hostParent);
+		insertOrAppendPlacementNodeIntoContainer(child, hostParent, before);
 		let sibling = child.sibling;
 		while (sibling !== null) {
-			insertOrAppendPlacementNodeIntoContainer(sibling, hostParent);
+			insertOrAppendPlacementNodeIntoContainer(sibling, hostParent, before);
 			sibling = sibling.sibling;
 		}
 	}
@@ -478,7 +483,9 @@ function commitDeletion(childToDelete: FiberNode, root: FiberRootNode) {
 	// let rootHostNode = null;
 	// 要删除的根host节点，Fragment情形下可能会有多个
 	const hostChildrenToDelete = [];
-
+	if (__DEV__) {
+		console.warn('删除节点', childToDelete);
+	}
 	commitNestedComponent(childToDelete, (unmountFiber) => {
 		switch (unmountFiber.tag) {
 			case HostComponent:
@@ -499,6 +506,8 @@ function commitDeletion(childToDelete: FiberNode, root: FiberRootNode) {
 			case FunctionComponent:
 				// 1. 对于FC组件，要处理useEffect的清除副作用函数
 				commitPassiveEffects(unmountFiber, root, 'unmount');
+				break;
+			case Fragment:
 				break;
 			default:
 				if (__DEV__) {

@@ -135,6 +135,7 @@ function childReconciler(shouldTrackEffects: boolean) {
 
 	function placeSingleChild(fiber: FiberNode) {
 		if (shouldTrackEffects && fiber.alternate === null) {
+			// 在更新阶段时，如果该节点之前没有，标记为placement，也就是在更新阶段，插入节点
 			fiber.flags |= Placement;
 		}
 		return fiber;
