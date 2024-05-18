@@ -12,7 +12,8 @@ import {
 	HostText,
 	Fragment,
 	ContextProvider,
-	SuspenseComponent
+	SuspenseComponent,
+	OffscreenComponent
 } from './workTag';
 import { NoFlags, Ref, Update, Visibility } from './fiberFlags';
 import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
@@ -74,7 +75,7 @@ export const completeWork = (wip: FiberNode) => {
 					bubbleProperties(OffscreenFiber);
 				}
 			}
-			bubbleProperties(OffscreenFiber);
+			bubbleProperties(wip);
 			return null;
 
 		case HostText:
@@ -96,6 +97,8 @@ export const completeWork = (wip: FiberNode) => {
 		case FunctionComponent:
 		case Fragment:
 			bubbleProperties(wip);
+			return null;
+		case OffscreenComponent:
 			return null;
 		default:
 			if (__DEV__) {

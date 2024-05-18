@@ -50,6 +50,7 @@ export const beginWork = (wip: FiberNode, renderLane: Lane) => {
 		case ContextProvider:
 			return updateContextProvider(wip);
 		case SuspenseComponent:
+			// SuspenseComponent的children结构固定，所以在updateSuspenseComponent方法中直接reconcileChildren了，不需要再调用reconcileChildren
 			return updateSuspenseComponent(wip);
 		case OffscreenComponent:
 			return updateOffscreenComponent(wip);
@@ -216,7 +217,14 @@ function mountSuspenseFallbackChildren(
 	// 创建离屏的节点，承载primaryChildren
 	const primaryChildFragment = createFiberFromOffscreen(primaryChildProps);
 	// 创建fallback的容器Fragment
-	const fallbackChildFragment = createFiberFromFragment(fallbackChildren, null);
+	const fallbackChildFragment = createFiberFromFragment(
+		{
+			props: {
+				children: fallbackChildren
+			}
+		},
+		null
+	);
 
 	// TODO:个人感觉似乎没必要给fallback添加挂载副作用吧，mount时挂载都是appendChildren来进行
 	fallbackChildFragment.flags |= Placement;
@@ -237,11 +245,13 @@ function mountSuspensePrimaryChildren(wip: FiberNode, primaryChildren: any) {
 	};
 	// 创建离屏的节点，承载primaryChildren，不需要创建fallback，因为未必需要用到fallback
 	const primaryChildFragment = createFiberFromOffscreen(primaryChildProps);
+	// primaryChildFragment.flags |= Visibility;
 	primaryChildFragment.return = wip;
 	wip.child = primaryChildFragment;
 	return primaryChildFragment;
 }
 
+// 更新时的挂起流程
 function updateSuspenseFallbackChildren(
 	wip: FiberNode,
 	primaryChildren: any,
@@ -269,8 +279,12 @@ function updateSuspenseFallbackChildren(
 		);
 	} else {
 		fallbackChildFragment = createFiberFromFragment(
-			fallbackChildren,
-			fallbackChildren
+			{
+				props: {
+					children: fallbackChildren
+				}
+			},
+			null
 		);
 		// TODO:个人感觉似乎没必要给fallback添加挂载副作用吧，mount时挂载都是appendChildren来进行
 		fallbackChildFragment.flags |= Placement;

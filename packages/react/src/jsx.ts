@@ -115,4 +115,6 @@ export const jsxDEV = (type: ElementType, config: any): ReactElementType => {
 };
 
 export const Fragment = REACT_FRAGMENT_TYPE;
-export const Suspense = REACT_SUSPENSE_TYPE;
+export const Suspense = {
+	$$typeof: REACT_SUSPENSE_TYPE
+};
