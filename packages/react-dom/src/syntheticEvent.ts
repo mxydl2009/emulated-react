@@ -10,7 +10,7 @@ import {
 // 保存组件的props
 export const elementPropsKey = '__component_props__';
 
-export interface DOMElement extends Element {
+export interface DOMElement extends HTMLElement {
 	[elementPropsKey]: Props;
 }
 
@@ -29,7 +29,8 @@ export interface Paths {
 export const validEventList = ['click', 'dblclick'];
 
 /**
- * 将组件的props保存到DOM元素上
+ * 将fiber的props保存到DOM元素上
+ * 需要对className style 特殊处理
  * @param node
  * @param props
  */

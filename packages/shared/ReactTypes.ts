@@ -9,6 +9,7 @@ export interface Props {
 	content?: string | number;
 	value?: any;
 	fallback?: ReactElementType;
+	[key: string]: any;
 }
 export type ElementType = string | REACT_FRAGMENT_TYPE | ReactProviderType<any>;
 
