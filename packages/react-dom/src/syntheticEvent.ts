@@ -39,8 +39,15 @@ export function updateFiberPropsToInstance(node: DOMElement, props: Props) {
 }
 
 /**
+ * 真实的React监听了两次，一次监听capture事件流，一次监听bubble事件流
+ * React在触发两次dispatchEvent，第一次是capture事件流，第二次是bubble事件流
+ * 在dispatchEvent时，根据事件流的类型（capture或者bubble），从事件目标对象开始逐级向上找到各级的祖先fiber
+ * 从祖先fiber对象的stateNode[internalPropsKey]中获取到props，根据事件流类型，获取props中事件名称对应的处理函数
+ * 将事件处理函数加入到队列，然后刷新队列
+ *
  * 初始化事件系统
  * 1. 在container中添加事件监听，container作为代理，然后分发事件
+ *
  */
 export function initEvent(container: ContainerType, eventType: string) {
 	if (!validEventList.includes(eventType)) {
@@ -85,6 +92,7 @@ export function dispatchEvent(
 	}
 }
 
+//
 export function collectPaths(container, target, eventType) {
 	const paths = {
 		capture: [],
