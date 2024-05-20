@@ -39,6 +39,8 @@ import { resetHooksOnUnwind } from './fiberHooks';
 import { throwException } from './fiberThrow';
 import { unwindWork } from './fiberUnwindWork';
 
+let internalRenderRootCount = 0;
+
 // 存储工作的fiber, 当中断当前工作之后再恢复执行时, 就从workInProgress开始恢复
 let workInProgress: FiberNode | null = null;
 
@@ -298,6 +300,14 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
 		} catch (e) {
 			if (__DEV__) {
 				console.warn('workLoop发生错误', e);
+			}
+			if (__DEV__) {
+				internalRenderRootCount++;
+				if (internalRenderRootCount > 10) {
+					internalRenderRootCount = 0;
+					console.warn('循环次数太多了', e);
+					break;
+				}
 			}
 			handleThrow(root, e);
 			// workInProgress = null;
