@@ -2,7 +2,9 @@ import {
 	Instance,
 	appendInitialChild,
 	createInstance,
-	createTextInstance
+	createTextInstance,
+	prepareUpdate,
+	setInitialProperties
 } from 'hostConfig';
 import { FiberNode, OffscreenProps } from './fiberNode';
 import {
@@ -19,6 +21,7 @@ import { NoFlags, Ref, Update, Visibility } from './fiberFlags';
 import { updateFiberPropsToInstance } from 'react-dom/src/syntheticEvent';
 import { popProvider } from './fiberContext';
 import { popSuspenseHandler } from './suspenseContext';
+import { Props } from 'shared/ReactTypes';
 
 /**
  * 将子节点的实例挂载到父实例上
@@ -33,6 +36,7 @@ export const completeWork = (wip: FiberNode) => {
 				// update
 				// TODO: 判断属性的变化，变化了则标记更新，在commitUpdate中更新属性变化
 				// 可以在fiberNode.updateQueue中记录变化的属性，然后在commit阶段更新
+				updateHostComponentProperties(current, wip, wip.type, newProps);
 				// 下面的方法是偷懒简化的，直接将所有属性重新保存到实例上， 只是方便实现事件系统。
 				updateFiberPropsToInstance(wip.stateNode, newProps);
 				if (current.ref !== wip.ref) {
@@ -43,6 +47,7 @@ export const completeWork = (wip: FiberNode) => {
 				const instance = createInstance(wip.type, newProps);
 				appendAllChildren(instance, wip);
 				wip.stateNode = instance;
+				setInitialProperties(instance, newProps);
 				if (wip.ref !== null) {
 					markRef(wip);
 				}
@@ -170,4 +175,27 @@ function markUpdate(wip: FiberNode) {
 
 function markRef(fiber: FiberNode) {
 	fiber.flags |= Ref;
+}
+
+function updateHostComponentProperties(
+	current: FiberNode,
+	workInProgress: FiberNode,
+	type: string,
+	newProps: Props
+) {
+	const oldProps = current.memoizedProps;
+	if (oldProps === newProps) {
+		return;
+	}
+	const updatePayload = prepareUpdate(
+		workInProgress.stateNode,
+		type,
+		oldProps,
+		newProps
+	);
+	console.warn('updatePayload', updatePayload);
+	if (updatePayload.length > 0) {
+		workInProgress.updateQueue = updatePayload;
+		markUpdate(workInProgress);
+	}
 }

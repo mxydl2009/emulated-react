@@ -784,6 +784,21 @@ function App() {
 
 4. Suspense接着处理: pingSuspendedRoot函数会再次调度渲染工作，再次解析到LazyComponent时，调用lazyInitializer函数会返回payload的result结果的default属性，即一个返回jsx的函数（即函数组件），然后按照函数组件的渲染方式继续即可。
 
+### hostComponent的props创建与更新
+
+#### 创建
+
+在mount阶段的completeWork中，使用`setInitialProperties`方法将props设置到hostComponent上
+
+#### 更新
+
+在update阶段的completeWork中，使用`updateHostComponent(current, workInProgress, type, newProps, rootContainerInstance)`计算出有变化的props，存储到fiber.updateQueue，并将副作用标记为UPDATE。
+
+- 调用`var updatePayload = prepareUpdate(instance, type, oldProps, newProps, rootContainerInstance, currentHostContext)`计算出updatePayload;
+- prepareUpdate内部调用`return diffProperties(domElement, type, oldProps, newProps);`来计算props的差异并返回;
+
+在commit阶段，commitUpdate中，调用`updateProperties(domElement, updatePayload, type, oldProps, newProps)`将变化的props更新到DOM节点上。
+
 ## 常见问题记录
 
 Q: React是可以获知哪个fiber发生了更新(`scheduleUpdateOnFiber(fiber)`), 为什么不直接从该fiber重建fiber树呢？这样不是性能更高吗？
